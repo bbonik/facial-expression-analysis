@@ -43,6 +43,6 @@ The classes and scripts should work directly "out of the box". Emotion and front
 
 # Citation
 If you use this code in your research please cite the following paper:
-1. [V. Vonikakis, D. Neo Yuan Rong, S. Winkler. (2021). MorphSet: Augmenting categorical emotion datasets with dimensional affect labels using face morphing. Proc ICIP2021, Alaska USA, September 2021.] (https://arxiv.org/abs/2103.02854)
+1. [V. Vonikakis, D. Neo Yuan Rong, S. Winkler. (2021). MorphSet: Augmenting categorical emotion datasets with dimensional affect labels using face morphing. Proc ICIP2021, Alaska USA, September 2021.](https://arxiv.org/abs/2103.02854)
 2. [Vonikakis, V., S. Winkler. (2021). Efficient Facial Expression Analysis For Dimensional Affect Recognition Using Geometric Features.](https://arxiv.org/abs/2106.07817)
 3. [V. Vonikakis, S. Winkler. (2020). Identity Invariant Facial Landmark Frontalization for Facial Expression Analysis. Proc. ICIP2020, Abu Dhabi, October 2020.](https://stefan.winkler.site/Publications/icip2020a.pdf)
