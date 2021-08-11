@@ -11,6 +11,7 @@ invariant, so this works better when there are no shadows on the face.
 """
 
 
+import numpy as np
 import cv2
 import dlib
 import matplotlib.pyplot as plt
@@ -19,7 +20,8 @@ from emotions_dlib import EmotionsDlib, plot_landmarks
 
 plt.close('all')
 plt.style.use('seaborn')
-GRAPH_LENGTH = 30  # how many frames to be included in the grpahs
+GRAPH_LENGTH = 30  # frames
+EXP_AVG = 0.7  # 70% the new value 30% the old value
 
 
 cap = cv2.VideoCapture(0)  # camera object
@@ -33,8 +35,7 @@ emotion_estimator = EmotionsDlib(
 
 
 
-
-#--------------------------------------------------- initialize visualizations
+# initialize visualizations
 fig = plt.figure(figsize=(15,10))
 grid = plt.GridSpec(5, 6)
 plt.suptitle('(press q to quit) \n        ')
@@ -104,6 +105,12 @@ ls_arousal = []
 ls_valence = []
 ls_intensity = []
 
+ls_captures = []
+
+disp_arousal = 0
+disp_valence = 0
+disp_intensity = 0
+
 if __name__=="__main__":
 
     while(f < 300):  # for 300 frames
@@ -118,6 +125,8 @@ if __name__=="__main__":
             f=300
             break
     
+        
+        
         ret, frame = cap.read()  # capture a frame 
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = detector(image)  # detect faces
@@ -149,10 +158,15 @@ if __name__=="__main__":
             intensity = dict_emotions['emotions']['intensity']
             emotion_name = dict_emotions['emotions']['name']
             
-            # append graph buffers
-            ls_arousal.append(arousal)
-            ls_valence.append(valence)
-            ls_intensity.append(intensity)
+            # explonential averaging
+            disp_valence = EXP_AVG * valence + (1-EXP_AVG) * disp_valence
+            disp_arousal = EXP_AVG * arousal + (1-EXP_AVG) * disp_arousal
+            disp_intensity = EXP_AVG * intensity + (1-EXP_AVG) * disp_intensity
+            
+            # append buffer lists
+            ls_arousal.append(disp_arousal)
+            ls_valence.append(disp_valence)
+            ls_intensity.append(disp_intensity)
             if len(ls_arousal) > GRAPH_LENGTH: 
                 del ls_arousal[0]
                 del ls_valence[0]
@@ -182,8 +196,8 @@ if __name__=="__main__":
                 # arousal-valence plane
                 if points_av is not None: points_av.remove()
                 points_av, = axes[2].plot(
-                    valence, 
-                    arousal, 
+                    disp_valence, 
+                    disp_arousal, 
                     color='r', 
                     marker='.', 
                     markersize=20
@@ -195,7 +209,6 @@ if __name__=="__main__":
                     '| \n' + emotion_name
                     )
                 
-                # valence plot
                 if points_valence is not None: 
                     points_valence.remove()
                     polyg_valence.remove()
@@ -213,7 +226,6 @@ if __name__=="__main__":
                     color=(0.8,0.2,0.2)
                     )
 
-                # arousal plot
                 if points_arousal is not None: 
                     points_arousal.remove()
                     polyg_arousal.remove()
@@ -231,7 +243,6 @@ if __name__=="__main__":
                     color=(0.2,0.2,0.8)
                     )
                 
-                # intensity plot
                 if points_intensity is not None: 
                     points_intensity.remove()
                     polyg_intensity.remove()
@@ -250,6 +261,7 @@ if __name__=="__main__":
                     )
                 
                 plt.pause(0.001)  # needed for updating the graph
+                plt.show()               
                 
             f += 1
     
@@ -257,4 +269,3 @@ if __name__=="__main__":
     # When everything done, release resources
     cap.release()
     cv2.destroyAllWindows()
-
