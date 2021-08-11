@@ -7,9 +7,9 @@ A set of Python classes for estimating **dimensional emotions (i.e. Arousal, Val
 
 # Usage
 The classes and scripts should work directly "out of the box". Emotion and frontalization models have been learnt and are provided, as well as a dataset of landmarks for experimentation. There is also training code in order to retrain with your own data, if needed. 
-1. Detect faces and landmarks using DLIB.
-2. Instantiate an emotion class object and pass the landmarks object to it. 
-3. Get back a dictionary with: estimations of Arousal, Valence, Intensity, a string with a description of the emotion, e.g. moderately happy, slightly distressed etc., as well as the frontalized facial landmarks.
+1. **Detect faces** and **landmarks** using DLIB.
+2. **Instantiate an emotion class object** and pass the landmarks object to it. 
+3. Get back a dictionary with: estimations of **Arousal, Valence, Intensity**, a string with a **description of the emotion**, e.g. moderately happy, slightly distressed etc., as well as the **frontalized facial landmarks**.
 
 
 # Contents:
