@@ -106,7 +106,8 @@ class EmotionsDlib():
         if valence > 1: valence=1
         elif valence < -1: valence=-1
         
-        intensity = avi_predict[0][2]
+        # intensity = avi_predict[0][2]  # this overestimates the intensity
+        intensity = round(math.sqrt(valence ** 2 + arousal ** 2), 3)  # altern
         if intensity > 1: intensity=1
         elif intensity < 0: intensity=0
         
