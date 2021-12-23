@@ -2,7 +2,6 @@
 A set of Python classes for estimating **dimensional emotions (i.e. Arousal, Valence, Intensity and emotion labels)** and **frontalized ladmarks**, from 2D facial landmarks extracted by the **DLIB** libary.
 
 ![example1](data/images/example2.gif "example1")
-![example2](data/images/example.gif "example2")
 ![example3](data/images/example.png "example3")
 
 
