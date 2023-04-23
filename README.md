@@ -14,7 +14,7 @@ The classes and scripts should work directly "out of the box". Emotion and front
 
 # Contents:
 ```tree
-│   environment_requirements.txt                       [Environment file for the required version of libraries]
+│   environment_requirements.yml                       [Environment file for the required version of libraries]
 ├── source                                             [Directory: Source code]
 │   ├── emotions_dlib.py                               [The main set of classes for emotion estimation, feature generation and landmark frontalization] 
 │   ├── Extract_features_and_train_model.ipynb         [Jupyter notebook demonstrating end-to-end data loading, feature generation, analysis and model training]
@@ -37,20 +37,33 @@ The classes and scripts should work directly "out of the box". Emotion and front
 - dlib
 - opencv
 - numpy
-- sklearn
+- scikit-learn 0.23.1
 - imageio
 - matplotlib
+- pandas
+- Python 3.6
 
 
 # Python environment
-The code is based on Python 3.8. You can generate a new package environment similar to the one that was used to develop this code, buy running the following command line inside the python directory, where the ```environment_requirements.txt``` is located. 
+The code is based on Python 3.6 and scikit-learn 0.23.1. You can recreate the same environment that was used to develop this project, buy running the following command line inside the python directory, where the ```environment_requirements.yml``` is located. 
 
-```conda create --name <your_own_environment_name> --file environment_requirements.txt```
+```conda create --name <your_own_environment_name> --file=environment_requirements.yml```
 
 Once you create your new environment from the environment_requirements.txt, you can activate it with the following command. After that, you will be able to run the code.
 
 ```conda activate <your_own_environment_name>```
 
+## More details about the Python environment
+The above instructions are enough for your to recreate the correct environment and run the code. If you want however to build the environment from scratch, keep in mind that the project was built with scikit-learn=0.23.1, which has a dependency to Python=3.6. So you should first create your environment, install Python 3.6, install scikit-learn=0.23.1 and then the rest of packages.
+
+- ```conda create --name <your_own_environment_name>```
+- ```conda install python=3.6```
+- ```conda install scikit-learn=0.23.1```
+- ```conda install -c anaconda opencv```
+- ```conda install -c conda-forge dlib```
+- Install any other remaining packages...
+
+Ofcourse, it is possible to upgrade the project to a more recent version of scikit-learn. However this would require some minor code changes and probably retraining the model with the newer version of the PLS regressor. 
 
 # Citation
 If you use this code in your research please cite the following paper:
