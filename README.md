@@ -49,7 +49,7 @@ The code is based on Python 3.6 and scikit-learn 0.23.1. You can recreate the sa
 
 ```conda create --name <your_own_environment_name> --file=environment_requirements.yml```
 
-Once you create your new environment from the environment_requirements.txt, you can activate it with the following command. After that, you will be able to run the code.
+Once you create your new environment from the environment_requirements.yml, you can activate it with the following command. After that, you will be able to run the code.
 
 ```conda activate <your_own_environment_name>```
 
