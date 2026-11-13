@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from facial_expression_analysis import EmotionEstimator, LandmarkSubset, LinearEmotionModel
+from facial_expression_analysis.data import MorphSet
+from facial_expression_analysis.training import TrainConfig, compute_features, train_pls
+
+
+@pytest.fixture(scope="module")
+def synthetic_morphset(landmarks: np.ndarray) -> MorphSet:
+    """Small dataset with targets that are an exact linear function of the features."""
+    rng = np.random.default_rng(0)
+    n_subjects, per_subject = 40, 8
+    idx = rng.integers(0, len(landmarks), size=n_subjects * per_subject)
+    lm = landmarks[idx] + rng.normal(scale=1.5, size=(len(idx), 68, 2))
+    X = compute_features(lm, LandmarkSubset.NO_JAW)
+    w = rng.normal(size=(X.shape[1], 3)) / X.shape[1]
+    y = (X - X.mean(0)) @ w * 5
+    meta = pd.DataFrame({"subject": np.repeat(np.arange(n_subjects), per_subject)})
+    return MorphSet(meta=meta, landmarks=lm, targets=y)
+
+
+def test_train_pls_end_to_end(synthetic_morphset: MorphSet, tmp_path: Path) -> None:
+    result = train_pls(synthetic_morphset, TrainConfig(n_components=10, seed=0))
+    test = result.metrics["test"]
+    assert test["n_subjects"] == 4
+    assert test["regressor"]["valence"]["ccc"] > 0.9  # noiseless linear targets
+    assert set(test) == {"n_samples", "n_subjects", "regressor", "pipeline"}
+
+    path = result.model.save(tmp_path / "model.npz")
+    loaded = LinearEmotionModel.load(path)
+    assert loaded.metadata["config"]["n_components"] == 10
+    assert "sklearn_version" in loaded.metadata
+
+    est = EmotionEstimator(loaded)
+    assert est.predict(synthetic_morphset.landmarks[:3]).shape == (3, 3)

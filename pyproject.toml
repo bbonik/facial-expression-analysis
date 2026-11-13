@@ -1,0 +1,108 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "facial-expression-analysis"
+version = "2.0.0.dev0"
+description = "Dimensional facial expression analysis (arousal, valence, intensity) from facial landmarks with interpretable classical ML."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Vassilios Vonikakis", email = "bbonik@gmail.com" }]
+requires-python = ">=3.11"
+keywords = ["affective-computing", "facial-expression", "emotion-recognition", "arousal-valence", "dlib", "machine-learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python>=4.9",
+    "dlib-bin>=19.24",
+    "pooch>=1.8",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+train = [
+    "scikit-learn>=1.5",
+    "pandas>=2.2",
+    "pyarrow>=16",
+]
+notebooks = [
+    "facial-expression-analysis[train]",
+    "jupyterlab>=4",
+    "matplotlib>=3.8",
+]
+
+[project.scripts]
+fea = "facial_expression_analysis.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/bbonik/facial-expression-analysis"
+Issues = "https://github.com/bbonik/facial-expression-analysis/issues"
+
+[dependency-groups]
+dev = [
+    "facial-expression-analysis[train]",
+    "matplotlib>=3.8",
+    "mypy>=1.11",
+    "pandas-stubs>=2.2",
+    "pre-commit>=3.8",
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/facial_expression_analysis"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/data", "/notebooks", "/.github"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["notebooks/archive"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT", "PTH", "D"]
+ignore = [
+    "D100", "D104", "D105", "D107", "D102", "D103", "D101",  # docstrings: encouraged, not forced
+    "D203", "D213", "D413",
+    "N803", "N806",  # X / X_train are conventional in ML code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["dlib", "cv2", "pooch", "sklearn.*", "joblib"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+markers = [
+    "slow: needs large assets (dlib model, dataset) or long runtime",
+]
+
+[tool.coverage.run]
+source = ["facial_expression_analysis"]
+omit = ["*/live.py"]

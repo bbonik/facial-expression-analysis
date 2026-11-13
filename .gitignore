@@ -127,3 +127,15 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# macOS
+.DS_Store
+
+# Project
+data/Morphset.csv
+data/__MACOSX/
+data/*.npy
+models/
+!src/facial_expression_analysis/assets/*
+outputs/
+.ruff_cache/
