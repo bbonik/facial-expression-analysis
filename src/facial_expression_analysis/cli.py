@@ -88,8 +88,8 @@ def train(
     output: Annotated[Path, typer.Option("--output", "-o")] = Path("models/emotion_model.npz"),
     estimator: Annotated[
         Estimator,
-        typer.Option(help="kernel_ridge (default) or pls (linear, interpretable)."),
-    ] = Estimator.KERNEL_RIDGE,
+        typer.Option(help="pls (default, linear) or kernel_ridge (highest offline CCC)."),
+    ] = Estimator.PLS,
     components: Annotated[int, typer.Option(min=1, help="PLS components.")] = 31,
     gamma: Annotated[float, typer.Option(help="Kernel width x n_features.")] = 0.5,
     alpha: Annotated[float, typer.Option(help="Kernel ridge penalty.")] = 1.0,
@@ -228,7 +228,7 @@ def webcam(
 ) -> None:
     """Live emotion overlay from a webcam.
 
-    Keys: m switch model (kernel / PLS), -/+ smoothing, l landmarks, q or Esc quit.
+    Keys: m switch model (PLS / kernel), -/+ smoothing, l landmarks, q or Esc quit.
     """
     from .live import CameraError, run_webcam
 

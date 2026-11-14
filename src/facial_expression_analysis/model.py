@@ -4,11 +4,14 @@ Two model families are shipped, both stored as small ``.npz`` files with JSON
 metadata so that inference needs neither scikit-learn nor pickle:
 
 * :class:`LinearEmotionModel` - any linear model (PLS, ridge, ...):
-  ``y = X @ coef + intercept``. Interpretable (see :mod:`.interpret`).
+  ``y = X @ coef + intercept``. The default model is PLS(31): best calibrated on
+  neutral faces, a facial movement moves the same axis for every face, and most
+  robust to head pose (``experiments/12_behavioural_tests.py``). Interpretable
+  (see :mod:`.interpret`).
 * :class:`KernelEmotionModel` - RBF kernel ridge regression on a Nystroem basis:
-  ``y = k(z, basis) @ dual_coef + intercept`` on standardised features. The
-  default model: more accurate, smoother under landmark noise and better on
-  unseen extreme expressions (see ``experiments/08_model_comparison.py``).
+  ``y = k(z, basis) @ dual_coef + intercept`` on standardised features. Highest
+  offline CCC on MorphSet (``experiments/08_model_comparison.py``) and better on
+  extreme expressions such as screams, but less well-behaved live.
 
 :func:`load_model` reads either kind.
 """
@@ -27,8 +30,8 @@ from numpy.typing import ArrayLike, NDArray
 from .features import LandmarkSubset, PairwiseDistanceFeatures
 
 TARGETS = ("arousal", "valence", "intensity")
-DEFAULT_MODEL = "emotion_model.npz"  # kernel ridge
-LINEAR_MODEL = "emotion_model_linear.npz"  # PLS(31), the interpretable 2021-style model
+DEFAULT_MODEL = "emotion_model.npz"  # PLS(31): calibrated, decomposed, pose-robust
+KERNEL_MODEL = "emotion_model_kernel.npz"  # kernel ridge: highest offline CCC
 FORMAT_VERSION = 3  # v2 added scale_indices, v3 the model kind
 
 
@@ -207,9 +210,9 @@ class LinearEmotionModel:
 
     @classmethod
     def load(cls, path: str | Path | None = None) -> LinearEmotionModel:
-        """Load a linear model; the bundled PLS(31) model if ``path`` is ``None``."""
+        """Load a linear model; the bundled default PLS(31) model if ``path`` is ``None``."""
         if path is None:
-            with resources.as_file(_bundled(LINEAR_MODEL)) as p:
+            with resources.as_file(_bundled(DEFAULT_MODEL)) as p:
                 return cls.load(p)
         with np.load(path, allow_pickle=False) as data:
             version = _check_version(data)
@@ -380,9 +383,9 @@ class KernelEmotionModel:
 
     @classmethod
     def load(cls, path: str | Path | None = None) -> KernelEmotionModel:
-        """Load a kernel model; the bundled default model if ``path`` is ``None``."""
+        """Load a kernel model; the bundled kernel model if ``path`` is ``None``."""
         if path is None:
-            with resources.as_file(_bundled(DEFAULT_MODEL)) as p:
+            with resources.as_file(_bundled(KERNEL_MODEL)) as p:
                 return cls.load(p)
         with np.load(path, allow_pickle=False) as data:
             _check_version(data)

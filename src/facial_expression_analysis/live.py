@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 
 from .labels import describe_emotion
 from .landmarks import DlibLandmarkDetector
-from .model import EmotionModel, KernelEmotionModel, LinearEmotionModel, load_model
+from .model import EmotionModel, KernelEmotionModel, load_model
 from .pipeline import EmotionEstimator, largest_face
 from .viz import annotate_image, valence_color
 
@@ -201,14 +201,14 @@ def run_webcam(
 ) -> None:
     """Run the live demo until the user presses q/Esc or closes the window.
 
-    Keys: ``m`` switches between the given (default: kernel) model and the bundled
-    linear PLS(31) model on the same live input; ``-``/``+`` change the smoothing;
+    Keys: ``m`` switches between the given (default: PLS(31)) model and the bundled
+    kernel model on the same live input; ``-``/``+`` change the smoothing;
     ``l`` toggles the landmark overlay.
     """
     import cv2
 
     settings = DemoSettings(camera, smoothing, True, upsample, max_width)
-    models: list[EmotionModel] = [load_model(model_path), LinearEmotionModel.load()]
+    models: list[EmotionModel] = [load_model(model_path), KernelEmotionModel.load()]
     # The fit check describes the face, not the model: use a kernel model whenever one exists.
     kernel = next((m for m in models if isinstance(m, KernelEmotionModel)), None)
     quantiles = kernel.metadata.get("basis_distance_quantiles", {}) if kernel else {}

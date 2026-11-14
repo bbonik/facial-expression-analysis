@@ -166,17 +166,22 @@ def test_load_model_dispatches_linear(tmp_path: Path, rng: np.random.Generator) 
         KernelEmotionModel.load(path)
 
 
-def test_bundled_default_is_kernel_model(landmarks: np.ndarray) -> None:
+def test_bundled_models(landmarks: np.ndarray) -> None:
     from facial_expression_analysis import Frontalizer
     from facial_expression_analysis.model import KernelEmotionModel, load_model
 
-    model = load_model()
-    assert isinstance(model, KernelEmotionModel)
-    assert model.basis_landmarks.shape[1:] == (68, 2)
-    assert "metrics" in model.metadata
-    pred = model.predict(Frontalizer()(landmarks[:4]))
-    assert pred.shape == (4, 3)
-    assert np.all(np.isfinite(pred))
+    default = load_model()
+    assert isinstance(default, LinearEmotionModel)  # PLS(31) is the default
+    assert default.metadata["config"]["n_components"] == 31
+    kernel = KernelEmotionModel.load()
+    assert kernel.basis_landmarks.shape[1:] == (68, 2)
+    assert "basis_distance_quantiles" in kernel.metadata
+    front = Frontalizer()(landmarks[:4])
+    for model in (default, kernel):
+        assert "metrics" in model.metadata
+        pred = model.predict(front)
+        assert pred.shape == (4, 3)
+        assert np.all(np.isfinite(pred))
 
 
 def test_kernel_basis_distance_flags_outliers(kernel_problem: tuple) -> None:

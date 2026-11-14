@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 class Estimator(StrEnum):
     """Regressor families that can be trained and exported."""
 
-    KERNEL_RIDGE = "kernel_ridge"  # RBF kernel ridge on a Nystroem basis (default)
-    PLS = "pls"  # partial least squares (linear, interpretable)
+    PLS = "pls"  # partial least squares (default: linear, interpretable, well-behaved live)
+    KERNEL_RIDGE = "kernel_ridge"  # RBF kernel ridge on a Nystroem basis (highest offline CCC)
 
 
 @dataclass
@@ -41,7 +41,7 @@ class TrainConfig:
     selected by nested CV in ``experiments/08_model_comparison.py``.
     """
 
-    estimator: Estimator = Estimator.KERNEL_RIDGE
+    estimator: Estimator = Estimator.PLS
     n_components: int = 31
     gamma: float = 0.5
     alpha: float = 1.0

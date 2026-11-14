@@ -58,8 +58,8 @@ def test_train_pls_end_to_end(synthetic_morphset: MorphSet, tmp_path: Path) -> N
 def test_train_kernel_ridge_end_to_end(synthetic_morphset: MorphSet, tmp_path: Path) -> None:
     from facial_expression_analysis.model import KernelEmotionModel, load_model
 
-    config = TrainConfig(n_basis=150, seed=0)
-    assert config.estimator is Estimator.KERNEL_RIDGE  # the default
+    assert TrainConfig().estimator is Estimator.PLS  # the default
+    config = TrainConfig(estimator=Estimator.KERNEL_RIDGE, n_basis=150, seed=0)
     result = train_model(synthetic_morphset, config)  # export is checked against sklearn
     assert isinstance(result.model, KernelEmotionModel)
     assert result.metrics["test"]["regressor"]["valence"]["ccc"] > 0.8

@@ -26,14 +26,17 @@
 - The webcam demo could not be closed with `q`.
 
 ### Changed
-- **New default model: RBF kernel ridge** (2000-face Nyström basis, 2.1 MB, 0.33 ms per face).
-  Chosen from seven regressors evaluated on five axes (`experiments/08_model_comparison.py`).
-  Against the 2021-style PLS(31) it gains +0.086 / +0.043 / +0.053 CCC (A/V/I) in 5-fold
-  person-grouped CV, winning every fold, and +0.057 / +0.029 / +0.055 leaving one database
-  out. It has 22% less valence jitter under landmark noise. On real scream faces of unseen
-  people, arousal rises in 95% of cases, against 74% for PLS(31). PLS(31) is still bundled
-  (`emotion_model_linear.npz`, `LinearEmotionModel.load()`), is the most pose-robust, and is
-  the model to use for interpretation. See [MODEL_CARD.md](MODEL_CARD.md).
+- **Model selection on accuracy and behaviour.** Seven regressors were compared offline on
+  five axes (`experiments/08_model_comparison.py`). RBF kernel ridge had the best accuracy:
+  +0.086 / +0.043 / +0.053 CCC (A/V/I) over PLS(31) in person-grouped CV, winning every
+  fold. It was briefly the default. In the live demo PLS(31) behaved clearly better, and
+  `experiments/12_behavioural_tests.py` confirms why on unseen faces:
+  - neutral faces sit closer to (0, 0): distance 0.22 vs 0.34
+  - a smile moves only valence: 0.1% vs 21% of paths more than 20° off axis
+  - predictions are more stable across head pose
+  
+  **PLS(31) stays the default** (`emotion_model.npz`). The kernel model is bundled as
+  `emotion_model_kernel.npz` (`KernelEmotionModel.load()`). See [MODEL_CARD.md](MODEL_CARD.md).
 - Intensity is predicted directly by the regressor. It is no longer derived as
   `hypot(arousal, valence)`, which cost 0.058 CCC. (MorphSet labels satisfy that identity
   exactly, but the predictions are shrunk towards the mean.)
@@ -78,7 +81,9 @@
   metadata.
 - `interpret.py`: VIP scores, region shares, and the facial movement encoded by each PLS
   component. 17 of 31 components are localised movements resembling action units.
-- `experiments/01–11`: reproducible analyses behind every claim, with figures in
+- Webcam demo: `m` switches model live; a status bar shows every setting and the fit distance;
+  `scripts/demo.sh` sets up and launches it.
+- `experiments/01–12`: reproducible analyses behind every claim, with figures in
   `reports/figures/`.
 
 ## [1.0.0] - 2021

@@ -2,13 +2,13 @@
 # Set up and launch the real-time webcam demo.
 #
 # Usage: scripts/demo.sh [fea webcam options]
-#   scripts/demo.sh                     # default camera, kernel model
+#   scripts/demo.sh                     # default camera, PLS(31) model
 #   scripts/demo.sh --camera 1          # another camera
 #   scripts/demo.sh --smoothing 0.6     # calmer output
 #   scripts/demo.sh --upsample 1        # find smaller / more distant faces (slower)
 #   scripts/demo.sh --model my.npz      # a model trained with `fea train`
 #
-# Keys in the demo: m switch model (kernel / PLS), -/+ smoothing, l landmarks, q or Esc quit.
+# Keys in the demo: m switch model (PLS / kernel), -/+ smoothing, l landmarks, q or Esc quit.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
