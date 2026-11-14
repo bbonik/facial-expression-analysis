@@ -404,9 +404,12 @@ def estimates_card(
     ``faces`` holds (smoothed point, fit distance, per-face chips). Status is shown only
     as chips in the header row, so nothing appears, disappears or moves.
     """
+    # With one face its tags go in the header row too: next to the label they would move
+    # whenever the emotion word changes length.
+    head_chips = [*chips, *(faces[0][2] if len(faces) == 1 else [])]
     header = (
         f'<div class="fea-kicker fea-est-head"><span>{html.escape(model_name)}</span>'
-        f"{''.join(chips)}</div>"
+        f"{''.join(head_chips)}</div>"
     )
     if not faces:
         body = (
@@ -415,7 +418,7 @@ def estimates_card(
             '<div class="fea-muted">Start the camera and face it in good, even light.</div></div>'
         )
     elif len(faces) == 1:
-        p, dist, face_chips = faces[0]
+        p, dist, _ = faces[0]
         color = valence_hex(p.valence)
         bars = (
             _bar("Arousal", p.arousal, True, color)
@@ -423,8 +426,7 @@ def estimates_card(
             + _bar("Intensity", p.intensity, False, color)
         )
         body = (
-            f'<div class="fea-label" style="color:{color}">{html.escape(p.label)}'
-            f"{''.join(face_chips)}</div>"
+            f'<div class="fea-label" style="color:{color}">{html.escape(p.label)}</div>'
             f'<div class="fea-metrics">{bars}</div>{fit_badge(dist, p50, p99)}'
         )
     else:

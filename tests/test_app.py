@@ -265,5 +265,9 @@ def test_estimates_card_has_one_fixed_box_for_any_number_of_faces() -> None:
         assert "fea-status" not in card  # no banners
     assert "calibrated" in one
     assert "calibrating in 2" in one
+    # a single face's tags sit in the header row, not next to the (changing) label
+    head, rest = one.split('<div class="fea-est-body">', 1)
+    assert "calibrated" in head
+    assert "fea-chip" not in rest
     assert many.count('class="fea-mini"') == 2
     assert "poor fit" in many
