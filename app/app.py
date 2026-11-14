@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -35,6 +36,28 @@ FIGURE = next(
 )  # fmt: skip
 
 ENGINE = Engine()
+# A quit button makes sense only for a local run: on a Hugging Face Space (SPACE_ID is set)
+# it would stop the demo for every visitor.
+ALLOW_QUIT = os.environ.get("FEA_ALLOW_QUIT", "0" if "SPACE_ID" in os.environ else "1") == "1"
+
+
+def quit_app() -> None:
+    """Stop the server shortly after answering, so the page can show a goodbye message."""
+    threading.Timer(0.6, lambda: os._exit(0)).start()
+
+
+GOODBYE_JS = """
+() => {
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:grid;place-items:center;background:#070a14;
+                color:#e2e8f0;font-family:Inter,system-ui,sans-serif;text-align:center">
+      <div><div style="font-size:42px;margin-bottom:8px">👋</div>
+      <div style="font-size:22px;font-weight:700">The demo has stopped</div>
+      <div style="color:#94a3b8;margin-top:6px">You can close this tab.
+      Run <code>scripts/web_demo.sh</code> to start it again.</div></div>
+    </div>`;
+}
+"""
 
 
 # ----------------------------------------------------------------------------- handlers
@@ -47,7 +70,7 @@ def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
     if frame is None:
         return (
             None,
-            _wrap_svg(circumplex_svg(size=560)),
+            _wrap_svg(circumplex_svg(size=640)),
             metrics_card(None, model_name=model),
             state,
         )
@@ -70,7 +93,7 @@ def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
         footer=footer,
     )
     points = [smoothed] if smoothed else []
-    return overlay, _wrap_svg(circumplex_svg(points, state.trail, size=560)), card, state
+    return overlay, _wrap_svg(circumplex_svg(points, state.trail, size=640)), card, state
 
 
 def analyze_photo(image, model, show_landmarks):
@@ -191,6 +214,21 @@ FORCE_DARK = """
   new MutationObserver(relabel).observe(document.body,
     {subtree: true, childList: true, characterData: true});
   relabel();
+  // Keep the analysed frame exactly on top of the camera's video element, whatever its size.
+  const sync = () => {
+    const stage = document.querySelector('.fea-stage');
+    const video = stage?.querySelector('.fea-cam video');
+    const overlay = stage?.querySelector('.fea-overlay');
+    if (!video || !overlay) return;
+    const s = stage.getBoundingClientRect(), v = video.getBoundingClientRect();
+    if (v.width < 2 || v.height < 2) return;
+    Object.assign(overlay.style, {
+      top: `${v.top - s.top}px`, left: `${v.left - s.left}px`,
+      width: `${v.width}px`, height: `${v.height}px`,
+    });
+  };
+  setInterval(sync, 250);
+  window.addEventListener('resize', sync);
 }
 """
 
@@ -204,25 +242,25 @@ def build() -> gr.Blocks:
                 state = gr.State(LiveState())
                 # 2 x 2: camera (with the analysis drawn over it) | AV plane
                 #        settings                                | estimates
-                with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
-                    with gr.Column(scale=1, min_width=340, elem_classes="fea-stage"):
+                with gr.Row(equal_height=False, elem_classes="fea-grid-row"):
+                    with gr.Column(scale=2, min_width=300, elem_classes="fea-stage"):
                         cam = gr.Image(
                             sources=["webcam"], streaming=True, type="numpy",
                             show_label=False, webcam_options=gr.WebcamOptions(mirror=True),
-                            elem_classes="fea-cam", height=520,
+                            elem_classes="fea-cam", height=560,
                         )  # fmt: skip
                         # Drawn exactly over the raw preview, so the user sees one feed; the
                         # camera's own start/stop button stays on top (see style.css).
                         live_img = gr.Image(
                             show_label=False, interactive=False, buttons=[], format="jpeg",
-                            elem_classes="fea-overlay", height=520,
+                            elem_classes="fea-overlay",
                         )  # fmt: skip
-                    with gr.Column(scale=1, min_width=340, elem_classes="fea-plane"):
+                    with gr.Column(scale=3, min_width=380, elem_classes="fea-plane"):
                         live_circ = gr.HTML(
-                            _wrap_svg(circumplex_svg(size=560)), elem_classes="fea-html-plain"
+                            _wrap_svg(circumplex_svg(size=640)), elem_classes="fea-html-plain"
                         )
                 with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
-                    with gr.Column(scale=1, min_width=340, elem_classes="fea-settings"):
+                    with gr.Column(scale=2, min_width=300, elem_classes="fea-settings"):
                         gr.HTML(
                             '<div class="fea-section-title">Settings</div>',
                             elem_classes="fea-html-plain",
@@ -236,7 +274,15 @@ def build() -> gr.Blocks:
                             info="Higher is calmer but slower to react.",
                         )  # fmt: skip
                         show_lm = gr.Checkbox(True, label="Show landmarks")
-                    with gr.Column(scale=1, min_width=340):
+                        if ALLOW_QUIT:
+                            quit_btn = gr.Button(
+                                "Quit demo", variant="stop", size="sm",
+                                elem_classes="fea-quit",
+                            )  # fmt: skip
+                            quit_btn.click(quit_app, None, None, queue=False).then(
+                                None, None, None, js=GOODBYE_JS
+                            )
+                    with gr.Column(scale=3, min_width=380):
                         live_card = gr.HTML(
                             metrics_card(None, model_name=DEFAULT_MODEL),
                             elem_classes="fea-html-plain",

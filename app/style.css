@@ -142,10 +142,17 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
 .fea-stage .fea-cam, .fea-stage .fea-overlay { border-radius: 16px !important; overflow: hidden; }
 /* The analysed frame covers the raw preview ... */
 .fea-stage .fea-overlay {
-  position: absolute !important; top: 0; left: 0; right: 0; z-index: 5; pointer-events: none;
-  background: #000 !important; border: none !important;
+  position: absolute !important; top: 0; left: 0; z-index: 5; pointer-events: none;
+  background: #000 !important; border: none !important; padding: 0 !important;
+  min-width: 0 !important; border-radius: 0 !important;
 }
-.fea-stage .fea-overlay img { width: 100% !important; height: 100% !important; object-fit: contain; }
+/* every wrapper inside the overlay fills it; frame and preview are cropped identically */
+.fea-stage .fea-overlay .image-container,
+.fea-stage .fea-overlay .image-container > button,
+.fea-stage .fea-overlay .image-frame { width: 100% !important; height: 100% !important; max-height: none !important; padding: 0 !important; }
+/* Gradio's progress layer and toolbar would cover the frame */
+.fea-stage .fea-overlay > .wrap, .fea-stage .fea-overlay .icon-button-wrapper { display: none !important; }
+.fea-stage .fea-overlay img { width: 100% !important; height: 100% !important; object-fit: cover; }
 /* ... but only once there is one (before that the camera prompt shows through). */
 .fea-stage .fea-overlay:not(:has(img)) { visibility: hidden; }
 /* The camera's controls stay above the overlay and clickable. */
@@ -153,9 +160,9 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
 .fea-stage .fea-cam .button-wrap, .fea-stage .fea-cam select { z-index: 10 !important; }
 .fea-stage .fea-cam .button-wrap { position: absolute; }
 .fea-stage .fea-cam button { color: #fff !important; }
-.fea-cam video { object-fit: contain; }
+.fea-cam video { object-fit: cover; }
 .fea-plane .fea-circumplex-wrap { height: 100%; align-items: center; }
-.fea-plane .fea-circumplex { max-height: 540px; }
+.fea-plane .fea-circumplex { max-height: 600px; }
 .fea-section-title {
   font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
   color: var(--fea-muted); padding: 2px 4px;
@@ -169,3 +176,14 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
 }
 .fea-stage .fea-cam .button-wrap:hover { filter: brightness(1.12); }
 .fea-stage .fea-cam .button-wrap .icon { display: none !important; }
+
+/* centre the start/stop label inside its pill */
+.fea-stage .fea-cam .button-wrap { display: flex !important; justify-content: center; align-items: center; }
+.fea-stage .fea-cam .button-wrap button { margin: 0 !important; padding: 0 18px !important; width: auto !important; }
+.fea-stage .fea-cam .button-wrap .icon-with-text { gap: 0 !important; justify-content: center; margin: 0 !important; }
+.fea-quit { margin-top: 6px; }
+.fea-quit button, button.fea-quit {
+  background: rgba(244, 63, 94, 0.1) !important; color: #fda4af !important;
+  border: 1px solid rgba(244, 63, 94, 0.35) !important; font-weight: 600 !important;
+}
+.fea-quit button:hover, button.fea-quit:hover { background: rgba(244, 63, 94, 0.2) !important; }
