@@ -45,18 +45,31 @@ uv run fea predict data/images/kids.jpg -o outputs/
 
 ```text
 data/images/kids.jpg: 2 face(s)
-  [1] Extremely delighted      arousal=+0.584 valence=+0.515 intensity=0.779
-  [2] Extremely pleased        arousal=+0.101 valence=+0.865 intensity=0.871
+  [1] Extremely aroused        arousal=+0.595 valence=-0.134 intensity=1.000
+  [2] Extremely pleased        arousal=+0.064 valence=+0.760 intensity=0.860
 ```
 
 The dlib landmark model (~100 MB) is downloaded and cached on first use.
+
+### Real-time webcam demo
+
+```bash
+scripts/demo.sh            # installs dependencies, fetches the dlib model, opens the webcam
+```
+
+Keys: **m** switches between the kernel and the PLS(31) model on the same live input, **-/+**
+change the temporal smoothing and **l** toggles the landmark overlay. A status bar shows the
+active model and its test CCC, every setting, FPS, and the face's distance to the training faces.
+When that distance exceeds the 99th percentile of validation faces, the estimate is marked
+unreliable, usually because the landmarks fit badly. Options such as `--camera 1`,
+`--smoothing 0.6` or `--upsample 1` are passed on to `fea webcam`.
 
 ### Command line
 
 | Command | Description |
 |---|---|
 | `fea predict IMG... [-o DIR] [--json]` | Analyse every face in one or more images |
-| `fea webcam` | Live overlay with arousal-valence trail (q / Esc to quit) |
+| `fea webcam` | Live overlay with arousal-valence trail (m model, -/+ smoothing, l landmarks, q quit) |
 | `fea train [--estimator kernel_ridge\|pls] [--subset no_jaw] [--scale stable]` | Retrain on MorphSet with a person-wise split |
 | `fea train-frontalization` | Retrain the frontalization model on the multi-pose dataset |
 | `fea evaluate [-m MODEL]` | Evaluate a model on held-out test persons |

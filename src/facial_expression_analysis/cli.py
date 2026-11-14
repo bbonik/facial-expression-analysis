@@ -219,13 +219,23 @@ def benchmark(
 @app.command()
 def webcam(
     camera: Annotated[int, typer.Option(help="OpenCV camera index.")] = 0,
-    smoothing: Annotated[float, typer.Option(min=0, max=0.99, help="EMA smoothing.")] = 0.3,
+    smoothing: Annotated[
+        float, typer.Option(min=0, max=0.9, help="EMA smoothing (also -/+ keys).")
+    ] = 0.3,
+    upsample: Annotated[int, typer.Option(min=0, help="dlib upsampling (small faces).")] = 0,
+    max_width: Annotated[int, typer.Option(min=160, help="Resize frames to this width.")] = 640,
     model: ModelOpt = None,
 ) -> None:
-    """Live emotion overlay from a webcam (press q or Esc to quit)."""
+    """Live emotion overlay from a webcam.
+
+    Keys: m switch model (kernel / PLS), -/+ smoothing, l landmarks, q or Esc quit.
+    """
     from .live import run_webcam
 
-    run_webcam(camera=camera, smoothing=smoothing, model_path=model)
+    run_webcam(
+        camera=camera, smoothing=smoothing, model_path=model, upsample=upsample,
+        max_width=max_width,
+    )  # fmt: skip
 
 
 def _print_metrics(metrics: dict[str, dict]) -> None:  # type: ignore[type-arg]
