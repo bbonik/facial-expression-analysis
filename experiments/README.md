@@ -17,5 +17,6 @@ repository root, e.g. `uv run python experiments/05_feature_config_cv.py`.
 | `10_error_analysis.py` | Where does the model fail? (`--model kernel:0.5,1`) | Shrinkage (slope 0.61 A); sad too aroused, anger/fear not aroused enough; FACES hardest |
 | `11_interpretability.py` | What does PLS look at? Are components action units? | Inner mouth corners (48–60, 54–64) top VIP; 17/31 components localised; arousal ≈ mouth opening |
 | `12_behavioural_tests.py` | Do models behave sensibly on unseen faces? (neutral calibration, smile decomposition, pose stability) | PLS(31) wins all three, matching the live demo; kernel bends with identity (21% of smile paths off axis). PLS(31) is the default |
+| `13_tracking.py` | Can boxes from the previous frame's landmarks replace the detector? Low-light robustness | Tight landmark rectangle fails (20% of fits off by >5%); a learned box regressor matches the detector within its own noise floor and does not drift. dlib's fitter is contrast-sensitive: linear gain + slight blur + 5-box averaging, plus tracking, halve A/V jitter at night |
 
 Experiments 06–08 take 10–60 minutes; the others take under 2 minutes.

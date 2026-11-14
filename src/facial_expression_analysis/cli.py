@@ -224,18 +224,22 @@ def webcam(
     ] = 0.3,
     upsample: Annotated[int, typer.Option(min=0, help="dlib upsampling (small faces).")] = 0,
     max_width: Annotated[int, typer.Option(min=160, help="Resize frames to this width.")] = 640,
+    track: Annotated[
+        bool, typer.Option(help="Track landmarks between frames (steadier, better in low light).")
+    ] = True,
     model: ModelOpt = None,
 ) -> None:
     """Live emotion overlay from a webcam.
 
-    Keys: m switch model (PLS / kernel), -/+ smoothing, l landmarks, q or Esc quit.
+    Keys: m switch model (PLS / kernel), -/+ smoothing, l landmarks, t tracking,
+    q or Esc quit.
     """
     from .live import CameraError, run_webcam
 
     try:
         run_webcam(
             camera=camera, smoothing=smoothing, model_path=model, upsample=upsample,
-            max_width=max_width,
+            max_width=max_width, tracking=track,
         )  # fmt: skip
     except CameraError as exc:
         typer.secho(str(exc), fg=typer.colors.RED, err=True)

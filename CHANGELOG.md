@@ -95,7 +95,16 @@
   Space.
 - Webcam demo: `m` switches model live; a status bar shows every setting and the fit distance;
   `scripts/demo.sh` sets up and launches it.
-- `experiments/01–12`: reproducible analyses behind every claim, with figures in
+- **Landmark tracking for video** (`LandmarkTracker`, on by default in both demos; `t` key,
+  `--no-track`, "Landmark tracking" checkbox). Boxes come from the previous frame's landmarks
+  via `BoxRegressor`, a linear model trained on LFW to reproduce dlib's detector box
+  (IoU 0.87; landmarks match detector-based fits within the detector's own noise floor). Fits
+  use a robust mode (`DlibLandmarkDetector.fit(..., robust=True)`): linear contrast gain for
+  dim faces, slight blur, average of five shifted boxes, and a spread score that detects
+  tracking loss. Low-contrast frames are stretched linearly before detection. Simulated
+  night-time webcam video: A/V jitter 0.236 → 0.113, landmark error 2.8% → 1.6%, frames
+  without a face 10% → 6%; also about 2x faster.
+- `experiments/01–13`: reproducible analyses behind every claim, with figures in
   `reports/figures/`.
 
 ## [1.0.0] - 2021

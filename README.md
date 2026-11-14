@@ -61,8 +61,9 @@ scripts/web_demo.sh        # installs dependencies, fetches the dlib model, open
 
 Three tabs:
 - **Live:** webcam stream with a circumplex trail, A/V/I bars, a model switch, smoothing,
-  a landmark-fit reliability badge, several faces at once, and per-person neutral
-  calibration (optionally zeroed at your own neutral).
+  a landmark-fit reliability badge, several faces at once, landmark tracking (steadier, and
+  much better in low light), and per-person neutral calibration (optionally zeroed at your
+  own neutral).
 - **Photo:** every face in an uploaded image, or in one of the examples.
 - **How it works:** the pipeline, why the model is linear, limitations.
 
@@ -77,18 +78,29 @@ scripts/demo.sh            # installs dependencies, fetches the dlib model, open
 ```
 
 Keys: **m** switches between the PLS(31) and the kernel model on the same live input, **-/+**
-change the temporal smoothing and **l** toggles the landmark overlay. A status bar shows the
+change the temporal smoothing, **l** toggles the landmark overlay and **t** toggles landmark
+tracking (see below). A status bar shows the
 active model and its test CCC, every setting, FPS, and the face's distance to the training faces.
 When that distance exceeds the 99th percentile of validation faces, the estimate is marked
 unreliable, usually because the landmarks fit badly. Options such as `--camera 1`,
 `--smoothing 0.6` or `--upsample 1` are passed on to `fea webcam`.
+
+**Landmark tracking** (on by default in both demos). Instead of running the face detector on
+every frame, each frame's box is predicted from the previous frame's landmarks by a small
+linear model trained to reproduce the box dlib's detector would draw (a tight rectangle
+around the landmarks makes the fitter converge badly). The face region gets a linear
+contrast gain if it is dim and a slight blur against sensor noise, and the fit is averaged
+over five slightly shifted boxes; their disagreement tells the tracker when it has lost the
+face. In simulated night-time video this halves arousal/valence jitter and landmark error,
+cuts frames without a face, and is twice as fast as detecting every frame
+(`experiments/13_tracking.py`).
 
 ### Command line
 
 | Command | Description |
 |---|---|
 | `fea predict IMG... [-o DIR] [--json]` | Analyse every face in one or more images |
-| `fea webcam` | Live overlay with arousal-valence trail (m model, -/+ smoothing, l landmarks, q quit) |
+| `fea webcam [--no-track]` | Live overlay with arousal-valence trail (m model, -/+ smoothing, l landmarks, t tracking, q quit) |
 | `fea train [--estimator pls\|kernel_ridge] [--subset no_jaw] [--scale stable]` | Retrain on MorphSet with a person-wise split |
 | `fea train-frontalization` | Retrain the frontalization model on the multi-pose dataset |
 | `fea evaluate [-m MODEL]` | Evaluate a model on held-out test persons |

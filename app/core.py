@@ -11,6 +11,7 @@ from render import Point
 
 from facial_expression_analysis import DlibLandmarkDetector, EmotionEstimator, Frontalizer
 from facial_expression_analysis.labels import describe_emotion
+from facial_expression_analysis.landmarks import BoxRegressor, LandmarkTracker
 from facial_expression_analysis.model import EmotionModel, KernelEmotionModel, load_model
 
 MODELS = {
@@ -79,6 +80,7 @@ class LiveState:
     message: str = ""
     message_kind: str = "info"  # info / ok / warn
     message_until: float = 0.0
+    tracker: LandmarkTracker | None = None  # per-session landmark tracker (if enabled)
 
 
 class Engine:
@@ -94,6 +96,9 @@ class Engine:
         self.estimators = {k: EmotionEstimator(m, frontalizer) for k, m in models.items()}
         self.detector = DlibLandmarkDetector(upsample=0, max_width=max_width)
         self.detector_photo = DlibLandmarkDetector(upsample=1, max_width=1280)
+        # live tracking: low-light robust fits, boxes predicted from the previous landmarks
+        self.detector_robust = DlibLandmarkDetector(upsample=0, max_width=max_width, robust=True)
+        self.box_regressor = BoxRegressor.load()
         q = self.kernel.metadata.get("basis_distance_quantiles", {})
         self.p50, self.p99 = q.get("0.5"), q.get("0.99")
         # average raw prediction for neutral faces of unseen people (calibration target)
@@ -102,11 +107,20 @@ class Engine:
             for k, m in models.items()
         }
 
+    def new_tracker(self) -> LandmarkTracker:
+        """Create a landmark tracker for one video stream (sharing the detector and regressor)."""
+        return LandmarkTracker(self.detector_robust, self.box_regressor, max_faces=MAX_FACES)
+
     def analyze(
-        self, rgb: NDArray[np.uint8], model: str, *, photo: bool = False
+        self,
+        rgb: NDArray[np.uint8],
+        model: str,
+        *,
+        photo: bool = False,
+        tracker: LandmarkTracker | None = None,
     ) -> list[FaceResult]:
         estimator = self.estimators.get(model, self.estimators[DEFAULT_MODEL])
-        detector = self.detector_photo if photo else self.detector
+        detector = tracker or (self.detector_photo if photo else self.detector)
         faces = estimator.analyze_image(rgb, detector)
         faces.sort(key=lambda f: f.box.left)
         out = []

@@ -79,14 +79,20 @@ def _wrap_svg(svg: str) -> str:
     return f'<div class="fea-circumplex-wrap">{svg}</div>'
 
 
-def live_step(frame, model, smoothing, show_landmarks, zero, calibrate_clicks, reset_clicks, state):
+def live_step(
+    frame, model, smoothing, show_landmarks, tracking, zero, calibrate_clicks, reset_clicks, state
+):
     state = state or LiveState()
     handle_buttons(state, int(calibrate_clicks or 0), int(reset_clicks or 0))
     seen = []
     overlay = None
+    if not tracking or frame is None:
+        state.tracker = None  # start afresh when tracking is switched back on
+    elif state.tracker is None:
+        state.tracker = ENGINE.new_tracker()
     if frame is not None:
         frame = np.ascontiguousarray(frame[..., :3], dtype=np.uint8)
-        faces = ENGINE.analyze(frame, model)
+        faces = ENGINE.analyze(frame, model, tracker=state.tracker)
         state, seen = update_tracks(state, faces, model, smoothing, zero=bool(zero))
         calibration_step(state, seen, ENGINE.neutral[model], ENGINE.p99)
         overlay = draw_overlay(
@@ -119,7 +125,11 @@ def live_step(frame, model, smoothing, show_landmarks, zero, calibrate_clicks, r
         faces_out.append((p, f.distance, tags))
     if zero and seen and not zeroed_any and state.calibration is None:
         head.append(chip("zero mode: calibrate first", "warn"))
-    footer = f"{state.fps:.0f} fps · smoothing {smoothing:.2f}" if state.fps else ""
+    footer = (
+        f"{state.fps:.0f} fps · smoothing {smoothing:.2f} · tracking {'on' if tracking else 'off'}"
+        if state.fps
+        else ""
+    )
     card = estimates_card(
         faces_out, model_name=model, chips=head, p50=ENGINE.p50, p99=ENGINE.p99, footer=footer
     )
@@ -301,7 +311,9 @@ def build() -> gr.Blocks:
                                 0, 0.9, value=0.3, step=0.05, label="Temporal smoothing",
                                 info="Higher is calmer but slower to react.",
                             )  # fmt: skip
-                            show_lm = gr.Checkbox(True, label="Show landmarks")
+                            with gr.Row(elem_classes="fea-check-row"):
+                                show_lm = gr.Checkbox(True, label="Show landmarks")
+                                tracking = gr.Checkbox(True, label="Landmark tracking")
                             with gr.Row(elem_classes="fea-calib-row"):
                                 calibrate_btn = gr.Button(
                                     "Calibrate neutral", size="sm", elem_classes="fea-calibrate"
@@ -343,7 +355,17 @@ def build() -> gr.Blocks:
                         )
                 cam.stream(
                     live_step,
-                    [cam, model, smoothing, show_lm, zero, calibrate_clicks, reset_clicks, state],
+                    [
+                        cam,
+                        model,
+                        smoothing,
+                        show_lm,
+                        tracking,
+                        zero,
+                        calibrate_clicks,
+                        reset_clicks,
+                        state,
+                    ],
                     [live_img, live_circ, live_card, state],
                     stream_every=0.08,
                     time_limit=600,

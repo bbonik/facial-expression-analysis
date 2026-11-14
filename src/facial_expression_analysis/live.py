@@ -12,7 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .labels import describe_emotion
-from .landmarks import DlibLandmarkDetector
+from .landmarks import DlibLandmarkDetector, LandmarkTracker
 from .model import EmotionModel, KernelEmotionModel, load_model
 from .pipeline import EmotionEstimator, largest_face
 from .viz import annotate_image, valence_color
@@ -96,6 +96,7 @@ class DemoSettings:
     landmarks: bool = True
     upsample: int = 0
     max_width: int = 640
+    tracking: bool = True
 
 
 @dataclass
@@ -156,6 +157,7 @@ def _status_bar(
     row(78, [
         (f"Camera {settings.camera}", GREY),
         (f"dlib upsample {settings.upsample}, width {settings.max_width}px", GREY),
+        (f"tracking {'on' if settings.tracking else 'off'} (t)", GREY),
         (f"Faces: {n_faces}", GREY),
         (f"{fps:.1f} FPS", GREY),
         ("q / Esc: quit", GREY),
@@ -198,16 +200,20 @@ def run_webcam(
     model_path: str | Path | None = None,
     upsample: int = 0,
     max_width: int = 640,
+    tracking: bool = True,
 ) -> None:
     """Run the live demo until the user presses q/Esc or closes the window.
 
     Keys: ``m`` switches between the given (default: PLS(31)) model and the bundled
     kernel model on the same live input; ``-``/``+`` change the smoothing;
-    ``l`` toggles the landmark overlay.
+    ``l`` toggles the landmark overlay; ``t`` toggles landmark tracking (boxes from
+    the previous frame's landmarks and low-light robust fits, see
+    :class:`~facial_expression_analysis.landmarks.LandmarkTracker`) versus running the
+    face detector on every frame.
     """
     import cv2
 
-    settings = DemoSettings(camera, smoothing, True, upsample, max_width)
+    settings = DemoSettings(camera, smoothing, True, upsample, max_width, tracking)
     models: list[EmotionModel] = [load_model(model_path), KernelEmotionModel.load()]
     # The fit check describes the face, not the model: use a kernel model whenever one exists.
     kernel = next((m for m in models if isinstance(m, KernelEmotionModel)), None)
@@ -215,6 +221,9 @@ def run_webcam(
     current_model = 0
     estimator = EmotionEstimator(models[current_model])
     detector = DlibLandmarkDetector(upsample=upsample, max_width=max_width)
+    tracker = LandmarkTracker(
+        DlibLandmarkDetector(upsample=upsample, max_width=max_width, robust=True)
+    )
     cap = _open_camera(camera)
 
     trail: deque[tuple[float, float, float]] = deque(maxlen=30)
@@ -227,7 +236,7 @@ def run_webcam(
             if not ok:
                 break
             rgb = np.ascontiguousarray(cv2.flip(frame, 1)[:, :, ::-1], dtype=np.uint8)
-            faces = estimator.analyze_image(rgb, detector)
+            faces = estimator.analyze_image(rgb, tracker if settings.tracking else detector)
             face = largest_face(faces)
             fit = FitCheck(p50=quantiles.get("0.5"), p99=quantiles.get("0.99"))
             if face is not None:
@@ -262,6 +271,9 @@ def run_webcam(
                 settings.smoothing = max(0.0, round(settings.smoothing - 0.1, 1))
             elif key == ord("l"):
                 settings.landmarks = not settings.landmarks
+            elif key == ord("t"):
+                settings.tracking = not settings.tracking
+                tracker.reset()
     finally:
         cap.release()
         cv2.destroyAllWindows()
