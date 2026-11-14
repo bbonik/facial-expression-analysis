@@ -26,8 +26,9 @@ echo "==> Fetching the dlib landmark model (~100 MB, cached after the first run)
 uv run --quiet fea download
 
 if [ "$(uname)" = "Darwin" ]; then
-    echo "==> macOS: if the window stays black, allow camera access for your terminal in"
-    echo "    System Settings > Privacy & Security > Camera, then run this script again."
+    echo "==> macOS: the first run asks for camera access for this terminal app. Click Allow"
+    echo "    (or enable it in System Settings > Privacy & Security > Camera), then quit and"
+    echo "    reopen the terminal and run this script again."
 fi
 
 echo "==> Starting the demo. Keys: m model | -/+ smoothing | l landmarks | q quit"

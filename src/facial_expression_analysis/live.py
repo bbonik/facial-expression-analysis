@@ -6,6 +6,7 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -162,6 +163,35 @@ def _status_bar(
     return bar
 
 
+CAMERA_HELP = """Cannot open camera {camera}.
+
+macOS: the terminal app you run this from needs camera access.
+  1. System Settings > Privacy & Security > Camera: enable your terminal
+     (Terminal, iTerm, VS Code, ...). If it is not listed, run the demo once more
+     and click "Allow" in the dialog.
+  2. Quit and reopen the terminal app (permissions apply to new processes only).
+Otherwise: close other apps using the camera, or try another index (--camera 1)."""
+
+
+def _open_camera(camera: int, wait_s: float = 15.0) -> Any:
+    """Open a camera, retrying while a macOS permission dialog may be pending."""
+    import cv2
+
+    deadline = time.monotonic() + wait_s
+    while True:
+        cap = cv2.VideoCapture(camera)
+        if cap.isOpened():
+            return cap
+        cap.release()
+        if time.monotonic() > deadline:
+            raise CameraError(CAMERA_HELP.format(camera=camera))
+        time.sleep(1.0)
+
+
+class CameraError(RuntimeError):
+    """The camera could not be opened (permissions, busy, wrong index)."""
+
+
 def run_webcam(
     camera: int = 0,
     smoothing: float = 0.3,
@@ -185,9 +215,7 @@ def run_webcam(
     current_model = 0
     estimator = EmotionEstimator(models[current_model])
     detector = DlibLandmarkDetector(upsample=upsample, max_width=max_width)
-    cap = cv2.VideoCapture(camera)
-    if not cap.isOpened():
-        raise RuntimeError(f"Cannot open camera {camera}")
+    cap = _open_camera(camera)
 
     trail: deque[tuple[float, float, float]] = deque(maxlen=30)
     state: NDArray[np.float64] | None = None

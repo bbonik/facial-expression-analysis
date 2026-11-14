@@ -230,12 +230,16 @@ def webcam(
 
     Keys: m switch model (kernel / PLS), -/+ smoothing, l landmarks, q or Esc quit.
     """
-    from .live import run_webcam
+    from .live import CameraError, run_webcam
 
-    run_webcam(
-        camera=camera, smoothing=smoothing, model_path=model, upsample=upsample,
-        max_width=max_width,
-    )  # fmt: skip
+    try:
+        run_webcam(
+            camera=camera, smoothing=smoothing, model_path=model, upsample=upsample,
+            max_width=max_width,
+        )  # fmt: skip
+    except CameraError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from None
 
 
 def _print_metrics(metrics: dict[str, dict]) -> None:  # type: ignore[type-arg]
