@@ -82,6 +82,10 @@
   metadata.
 - `interpret.py`: VIP scores, region shares, and the facial movement encoded by each PLS
   component. 17 of 31 components are localised movements resembling action units.
+- **Gradio web demo** (`app/`). It has live webcam and photo tabs, a custom SVG circumplex
+  with the 24 emotion words and a trail, metric cards, a landmark-fit reliability badge and
+  a live model switch. `scripts/deploy_space.sh` deploys it as a self-contained Hugging Face
+  Space.
 - Webcam demo: `m` switches model live; a status bar shows every setting and the fit distance;
   `scripts/demo.sh` sets up and launches it.
 - `experiments/01–12`: reproducible analyses behind every claim, with figures in

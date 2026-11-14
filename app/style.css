@@ -1,0 +1,137 @@
+/* Facial Expression Analysis: web demo styles (dark, glassy, modern). */
+
+:root {
+  --fea-bg: #070a14;
+  --fea-card: rgba(17, 24, 39, 0.62);
+  --fea-border: rgba(148, 163, 184, 0.14);
+  --fea-text: #e2e8f0;
+  --fea-muted: #94a3b8;
+  --fea-accent: #a78bfa;
+  --fea-accent-2: #60a5fa;
+  --fea-ok: #34d399;
+  --fea-warn: #fbbf24;
+}
+
+html, body {
+  background:
+    radial-gradient(1200px 640px at 15% -10%, rgba(124, 58, 237, 0.20), transparent 60%),
+    radial-gradient(1000px 560px at 95% 0%, rgba(37, 99, 235, 0.15), transparent 60%),
+    var(--fea-bg) !important;
+  background-attachment: fixed !important;
+}
+gradio-app, .gradio-container, .gradio-container .main { background: transparent !important; }
+.gradio-container { max-width: 100% !important; width: 100% !important; }
+.gradio-container .main, .gradio-container .contain, .gradio-container .app {
+  max-width: 1480px !important; width: 100% !important; margin: 0 auto !important;
+  padding-left: 12px; padding-right: 12px;
+}
+footer { display: none !important; }
+
+/* ------------------------------------------------------------------ hero */
+.fea-hero { padding: 28px 8px 8px; text-align: center; }
+.fea-pill {
+  display: inline-flex; gap: 8px; align-items: center;
+  padding: 6px 14px; border-radius: 999px; font-size: 12.5px; letter-spacing: .02em;
+  color: #c4b5fd; background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.3);
+}
+.fea-pill .fea-live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #34d399;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, .7); animation: fea-pulse 1.8s infinite;
+}
+@keyframes fea-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); }
+  70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+.fea-hero h1 {
+  margin: 16px 0 10px; font-size: clamp(30px, 4.4vw, 52px); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.05; color: var(--fea-text);
+}
+.fea-hero h1 span {
+  background: linear-gradient(90deg, #a78bfa, #60a5fa 55%, #34d399);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.fea-hero p { max-width: 760px; margin: 0 auto; color: var(--fea-muted); font-size: 16.5px; line-height: 1.55; }
+.fea-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+.fea-links a {
+  text-decoration: none !important; color: var(--fea-text) !important; font-size: 13.5px; font-weight: 500;
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--fea-border);
+  background: rgba(30, 41, 59, 0.5); transition: all .15s ease;
+}
+.fea-links a:hover { border-color: rgba(167, 139, 250, .6); background: rgba(76, 29, 149, .25); }
+.fea-stats { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; margin: 22px 0 6px; }
+.fea-stat { text-align: center; }
+.fea-stat b { display: block; font-size: 22px; color: var(--fea-text); font-weight: 700; letter-spacing: -0.02em; }
+.fea-stat span { font-size: 12px; color: var(--fea-muted); text-transform: uppercase; letter-spacing: .08em; }
+
+/* ------------------------------------------------------------------ gradio blocks */
+.block, .form, .tabs, .tabitem { border-color: var(--fea-border) !important; }
+.block { background: var(--fea-card) !important; backdrop-filter: blur(10px); border-radius: 16px !important; }
+.tab-nav, [role="tablist"] { border-bottom: 1px solid var(--fea-border) !important; }
+button[role="tab"] { font-weight: 600 !important; font-size: 15px !important; }
+button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; border-color: var(--fea-accent) !important; }
+.fea-html-plain, .fea-html-plain .block { background: transparent !important; border: none !important; box-shadow: none !important; }
+.fea-video img, .fea-cam video { border-radius: 12px; }
+
+/* ------------------------------------------------------------------ circumplex */
+.fea-circumplex-wrap { display: flex; justify-content: center; padding: 6px 0 2px; }
+.fea-circumplex text { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+
+/* ------------------------------------------------------------------ cards */
+.fea-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.75));
+  border: 1px solid var(--fea-border); border-radius: 16px; padding: 18px 20px; color: var(--fea-text);
+}
+.fea-kicker { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--fea-muted); }
+.fea-label { font-size: 28px; font-weight: 750; letter-spacing: -0.02em; margin: 4px 0 14px; transition: color .25s; }
+.fea-metrics { display: grid; gap: 10px; }
+.fea-metric { display: grid; grid-template-columns: 74px 1fr 52px; align-items: center; gap: 10px; }
+.fea-metric-name { font-size: 13px; color: var(--fea-muted); }
+.fea-metric-value { font-variant-numeric: tabular-nums; font-size: 13.5px; text-align: right; color: var(--fea-text); }
+.fea-bar { position: relative; height: 9px; border-radius: 99px; background: rgba(148, 163, 184, 0.15); overflow: hidden; }
+.fea-bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 99px; transition: left .2s ease, width .2s ease; }
+.fea-bar-centre { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(226, 232, 240, 0.45); }
+.fea-badge {
+  margin-top: 16px; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+}
+.fea-badge-sub { flex-basis: 100%; font-weight: 400; font-size: 12px; opacity: .8; padding-left: 16px; }
+.fea-badge-ok { color: var(--fea-ok); background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); }
+.fea-badge-warn { color: var(--fea-warn); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
+.fea-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+.fea-footer { margin-top: 12px; font-size: 12px; color: var(--fea-muted); }
+.fea-empty { text-align: center; padding: 34px 20px; color: var(--fea-text); }
+.fea-empty-icon { font-size: 30px; color: var(--fea-accent); margin-bottom: 6px; }
+.fea-muted { color: var(--fea-muted); font-size: 13px; margin-top: 4px; }
+
+.fea-faces { display: grid; gap: 10px; }
+.fea-face {
+  position: relative; padding: 14px 16px 14px 54px; border-radius: 14px; color: var(--fea-text);
+  background: rgba(30, 41, 59, 0.65); border: 1px solid var(--fea-border);
+}
+.fea-face-tag {
+  position: absolute; left: 14px; top: 14px; width: 28px; height: 28px; border-radius: 9px;
+  color: #0b1020; font-weight: 800; display: grid; place-items: center; font-size: 14px;
+}
+.fea-face-label { font-weight: 700; font-size: 17px; }
+.fea-face-nums { font-size: 13px; color: var(--fea-muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.fea-face .fea-badge { margin-top: 10px; }
+
+/* ------------------------------------------------------------------ about */
+.fea-about { color: var(--fea-text); line-height: 1.6; }
+.fea-about h3 { font-size: 20px; margin: 22px 0 10px; letter-spacing: -0.01em; }
+.fea-about p, .fea-about li { color: #cbd5e1; font-size: 14.5px; }
+.fea-about a { color: var(--fea-accent) !important; }
+.fea-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.fea-step {
+  border: 1px solid var(--fea-border); border-radius: 14px; padding: 14px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.6));
+}
+.fea-step b { display: block; color: var(--fea-text); margin: 4px 0; font-size: 14.5px; }
+.fea-step span { color: var(--fea-muted); font-size: 12.5px; line-height: 1.45; display: block; }
+.fea-step i { font-style: normal; font-size: 11px; color: var(--fea-accent); font-weight: 700; letter-spacing: .1em; }
+.fea-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 4px; }
+.fea-table th, .fea-table td { padding: 9px 10px; border-bottom: 1px solid var(--fea-border); text-align: left; }
+.fea-table th { color: var(--fea-muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; }
+.fea-table td b { color: var(--fea-ok); }
+.fea-note { font-size: 12.5px; color: var(--fea-muted); text-align: center; padding: 18px 8px 26px; }

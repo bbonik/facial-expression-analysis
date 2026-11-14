@@ -53,7 +53,23 @@ data/images/kids.jpg: 2 face(s)
 
 The dlib landmark model (~100 MB) is downloaded and cached on first use.
 
-### Real-time webcam demo
+### Web demo (Gradio)
+
+```bash
+uv run --extra demo python app/app.py      # http://127.0.0.1:7860
+```
+
+Three tabs:
+- **Live:** webcam stream with a circumplex trail, A/V/I bars, a model switch, smoothing
+  and a landmark-fit reliability badge.
+- **Photo:** every face in an uploaded image, or in one of the examples.
+- **How it works:** the pipeline, why the model is linear, limitations.
+
+`scripts/deploy_space.sh` publishes it to a Hugging Face Space: run
+`uvx --from huggingface_hub hf auth login` once, then the script. `--dry-run` builds the
+self-contained Space folder in `build/space` without uploading it.
+
+### Real-time webcam demo (OpenCV)
 
 ```bash
 scripts/demo.sh            # installs dependencies, fetches the dlib model, opens the webcam
@@ -83,7 +99,9 @@ unreliable, usually because the landmarks fit badly. Options such as `--camera 1
 ```python
 from facial_expression_analysis import DlibLandmarkDetector, EmotionEstimator, load_image
 
-estimator = EmotionEstimator()  # bundled PLS(31) model; or EmotionEstimator(KernelEmotionModel.load())
+estimator = (
+    EmotionEstimator()
+)  # bundled PLS(31) model; or EmotionEstimator(KernelEmotionModel.load())
 faces = estimator.analyze_image(load_image("face.jpg"), DlibLandmarkDetector())
 for face in faces:
     e = face.emotion
@@ -177,6 +195,8 @@ src/facial_expression_analysis/
 ├── interpret.py         VIP, region shares, facial movements of linear models
 ├── frontalization_training.py  Retraining the frontalization model
 ├── cli.py, live.py      Command line and webcam demo
+app/                     Gradio web demo (app.py layout, core.py engine, render.py SVG/HTML)
+scripts/                 demo.sh (OpenCV webcam), deploy_space.sh (Hugging Face Space)
 └── assets/              Bundled frontalization weights and emotion models (~2.5 MB)
 tests/                   Unit, regression and equivalence tests against the 2021 implementation
 experiments/             Reproducible analyses behind every claim (see experiments/README.md)
