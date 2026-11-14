@@ -14,9 +14,11 @@ from facial_expression_analysis import (
 )
 from facial_expression_analysis.data import MorphSet
 from facial_expression_analysis.training import (
+    Estimator,
     TrainConfig,
     compute_features,
     cross_validate_pls,
+    train_model,
     train_pls,
 )
 
@@ -51,6 +53,23 @@ def test_train_pls_end_to_end(synthetic_morphset: MorphSet, tmp_path: Path) -> N
 
     est = EmotionEstimator(loaded)
     assert est.predict(synthetic_morphset.landmarks[:3]).shape == (3, 3)
+
+
+def test_train_kernel_ridge_end_to_end(synthetic_morphset: MorphSet, tmp_path: Path) -> None:
+    from facial_expression_analysis.model import KernelEmotionModel, load_model
+
+    config = TrainConfig(n_basis=150, seed=0)
+    assert config.estimator is Estimator.KERNEL_RIDGE  # the default
+    result = train_model(synthetic_morphset, config)  # export is checked against sklearn
+    assert isinstance(result.model, KernelEmotionModel)
+    assert result.metrics["test"]["regressor"]["valence"]["ccc"] > 0.8
+    loaded = load_model(result.model.save(tmp_path / "k.npz"))
+    assert loaded.metadata["config"]["estimator"] == "kernel_ridge"
+    est = EmotionEstimator(loaded)
+    np.testing.assert_allclose(
+        est.predict(synthetic_morphset.landmarks[:3]),
+        EmotionEstimator(result.model).predict(synthetic_morphset.landmarks[:3]),
+    )
 
 
 def test_cross_validate_pls_shapes(synthetic_morphset: MorphSet) -> None:

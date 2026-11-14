@@ -12,6 +12,7 @@ import numpy as np
 import typer
 
 from .features import LandmarkSubset, ScaleReference
+from .training import Estimator
 
 app = typer.Typer(
     help="Dimensional facial expression analysis (arousal, valence, intensity).",
@@ -57,11 +58,11 @@ def predict(
     """Estimate the emotions of every face in one or more images."""
     from .io import load_image, save_image
     from .landmarks import DlibLandmarkDetector
-    from .model import LinearEmotionModel
+    from .model import load_model
     from .pipeline import EmotionEstimator
     from .viz import annotate_image
 
-    estimator = EmotionEstimator(LinearEmotionModel.load(model))
+    estimator = EmotionEstimator(load_model(model))
     detector = DlibLandmarkDetector(upsample=upsample)
     results = {}
     for path in images:
@@ -85,7 +86,14 @@ def predict(
 @app.command()
 def train(
     output: Annotated[Path, typer.Option("--output", "-o")] = Path("models/emotion_model.npz"),
-    components: Annotated[int, typer.Option(min=1)] = 31,
+    estimator: Annotated[
+        Estimator,
+        typer.Option(help="kernel_ridge (default) or pls (linear, interpretable)."),
+    ] = Estimator.KERNEL_RIDGE,
+    components: Annotated[int, typer.Option(min=1, help="PLS components.")] = 31,
+    gamma: Annotated[float, typer.Option(help="Kernel width x n_features.")] = 0.5,
+    alpha: Annotated[float, typer.Option(help="Kernel ridge penalty.")] = 1.0,
+    n_basis: Annotated[int, typer.Option(min=10, help="Nystroem basis size.")] = 2000,
     subset: Annotated[LandmarkSubset, typer.Option()] = LandmarkSubset.NO_JAW,
     scale: Annotated[
         ScaleReference, typer.Option(help="Landmarks used to estimate the face scale.")
@@ -93,14 +101,16 @@ def train(
     seed: Annotated[int, typer.Option()] = 1,
     data: Annotated[Path | None, typer.Option(help="Path to Morphset.csv.zip.")] = None,
 ) -> None:
-    """Train a PLS emotion model on MorphSet with a person-wise split."""
+    """Train an emotion model on MorphSet with a person-wise split."""
     from .data import load_morphset
-    from .training import TrainConfig, train_pls
+    from .training import TrainConfig, train_model
 
     dataset = load_morphset(data)
-    result = train_pls(
-        dataset, TrainConfig(n_components=components, subset=subset, scale=scale, seed=seed)
-    )
+    config = TrainConfig(
+        estimator=estimator, n_components=components, gamma=gamma, alpha=alpha,
+        n_basis=n_basis, subset=subset, scale=scale, seed=seed,
+    )  # fmt: skip
+    result = train_model(dataset, config)
     result.model.save(output)
     output.with_suffix(".metrics.json").write_text(json.dumps(result.metrics, indent=2))
     _print_metrics(result.metrics)
@@ -142,12 +152,12 @@ def evaluate(
 ) -> None:
     """Evaluate a model on the held-out test persons of MorphSet."""
     from .data import load_morphset, split_by_group
-    from .model import LinearEmotionModel
+    from .model import load_model
     from .training import evaluate_model
 
     dataset = load_morphset(data)
     _, val, test = split_by_group(dataset.persons, seed=seed)
-    m = LinearEmotionModel.load(model)
+    m = load_model(model)
     _print_metrics(
         {
             "validation": evaluate_model(m, dataset.subset(val)),
@@ -168,11 +178,11 @@ def benchmark(
     from .io import load_image
     from .labels import describe_emotion
     from .landmarks import DlibLandmarkDetector
-    from .model import LinearEmotionModel
+    from .model import load_model
 
     rgb = load_image(image)
     detector = DlibLandmarkDetector(upsample=upsample)
-    model = LinearEmotionModel.load()
+    model = load_model()
     frontalizer, features = Frontalizer(), model.features
     assert isinstance(features, PairwiseDistanceFeatures)
 

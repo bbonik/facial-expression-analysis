@@ -103,3 +103,90 @@ def test_predict_accepts_single_and_batch(landmarks: np.ndarray) -> None:
     batch = model.predict(front)
     assert batch.shape == (4, 3)
     np.testing.assert_allclose(model.predict(front[0]), batch[0])
+
+
+# ---------------------------------------------------------------- kernel model
+@pytest.fixture(scope="module")
+def kernel_problem(landmarks: np.ndarray) -> tuple:
+    from sklearn.kernel_approximation import Nystroem
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    from facial_expression_analysis import Frontalizer
+
+    rng = np.random.default_rng(0)
+    lm = landmarks[rng.integers(0, len(landmarks), 300)] + rng.normal(scale=1.0, size=(300, 68, 2))
+    frontal = Frontalizer()(lm)
+    feat = PairwiseDistanceFeatures("no_jaw")
+    X = feat.transform(frontal).astype(np.float64)
+    y = np.tanh(X[:, :3] - X[:, :3].mean(0))
+    pipe = make_pipeline(
+        StandardScaler(), Nystroem(gamma=0.5 / X.shape[1], n_components=100, random_state=0),
+        Ridge(alpha=1.0),
+    ).fit(X, y)  # fmt: skip
+    return feat, frontal, X, pipe
+
+
+def test_kernel_model_reproduces_pipeline(kernel_problem: tuple) -> None:
+    from facial_expression_analysis.model import KernelEmotionModel
+
+    feat, frontal, X, pipe = kernel_problem
+    model = KernelEmotionModel.from_estimator(pipe, feat, frontal, check_features=X)
+    np.testing.assert_allclose(model.predict_features(X), pipe.predict(X), atol=1e-8)
+    np.testing.assert_allclose(model.predict(frontal[:5]), pipe.predict(X[:5]), atol=1e-8)
+    assert model.predict(frontal[0]).shape == (3,)
+
+
+def test_kernel_model_roundtrip_and_dispatch(kernel_problem: tuple, tmp_path: Path) -> None:
+    from facial_expression_analysis.model import KernelEmotionModel, load_model
+
+    feat, frontal, X, pipe = kernel_problem
+    model = KernelEmotionModel.from_estimator(pipe, feat, frontal, metadata={"note": "k"})
+    path = model.save(tmp_path / "k.npz")
+    loaded = load_model(path)
+    assert isinstance(loaded, KernelEmotionModel)
+    assert loaded.metadata == {"note": "k"}
+    np.testing.assert_allclose(loaded.predict_features(X[:20]), model.predict_features(X[:20]))
+    with pytest.raises(ValueError, match="kernel model"):
+        LinearEmotionModel.load(path)
+
+
+def test_load_model_dispatches_linear(tmp_path: Path, rng: np.random.Generator) -> None:
+    from facial_expression_analysis.model import KernelEmotionModel, load_model
+
+    feat = PairwiseDistanceFeatures("no_jaw")
+    lin = LinearEmotionModel(
+        rng.normal(size=(feat.n_features, 3)), np.zeros(3), feat.landmark_indices,
+        feat.scale_indices,
+    )  # fmt: skip
+    path = lin.save(tmp_path / "l.npz")
+    assert isinstance(load_model(path), LinearEmotionModel)
+    with pytest.raises(ValueError, match="linear model"):
+        KernelEmotionModel.load(path)
+
+
+def test_bundled_default_is_kernel_model(landmarks: np.ndarray) -> None:
+    from facial_expression_analysis import Frontalizer
+    from facial_expression_analysis.model import KernelEmotionModel, load_model
+
+    model = load_model()
+    assert isinstance(model, KernelEmotionModel)
+    assert model.basis_landmarks.shape[1:] == (68, 2)
+    assert "metrics" in model.metadata
+    pred = model.predict(Frontalizer()(landmarks[:4]))
+    assert pred.shape == (4, 3)
+    assert np.all(np.isfinite(pred))
+
+
+def test_kernel_basis_distance_flags_outliers(kernel_problem: tuple) -> None:
+    from facial_expression_analysis.model import KernelEmotionModel
+
+    feat, frontal, X, pipe = kernel_problem
+    model = KernelEmotionModel.from_estimator(pipe, feat, frontal)
+    basis = feat.transform(model.basis_landmarks)
+    np.testing.assert_allclose(model.basis_distance(basis[:5]), 0.0, atol=1e-5)
+    far = X[:3] * 1.5
+    assert np.all(model.basis_distance(far) > 5 * np.median(model.basis_distance(X)))
+    # far from all basis faces the prediction tends to the intercept
+    np.testing.assert_allclose(model.predict_features(X[:3] * 10), np.tile(model.intercept, (3, 1)))

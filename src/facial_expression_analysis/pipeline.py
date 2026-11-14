@@ -12,7 +12,7 @@ from numpy.typing import ArrayLike, NDArray
 from .frontalization import Frontalizer
 from .geometry import as_landmark_batch
 from .labels import EmotionLabel, describe_emotion
-from .model import LinearEmotionModel
+from .model import EmotionModel, load_model
 
 if TYPE_CHECKING:
     from .landmarks import BoundingBox, LandmarkDetector
@@ -74,9 +74,11 @@ class EmotionEstimator:
     frontalizer
         Landmark frontalizer; the bundled one is used if ``None``.
     intensity_from_av
-        If ``True`` (default) intensity is the norm of ``(arousal, valence)``
-        instead of the regressor's own intensity output. This keeps the three
-        outputs geometrically consistent with the circumplex model.
+        If ``False`` (default) intensity is the regressor's own output. If
+        ``True`` it is the norm of ``(arousal, valence)``; the MorphSet labels
+        satisfy this identity exactly, but regression shrinks predictions
+        towards the mean, so the derived intensity is biased low (-0.058 CCC
+        in nested CV, see ``experiments/06_linear_model_selection.py``).
 
     Examples
     --------
@@ -87,12 +89,12 @@ class EmotionEstimator:
 
     def __init__(
         self,
-        model: LinearEmotionModel | None = None,
+        model: EmotionModel | None = None,
         frontalizer: Frontalizer | None = None,
         *,
-        intensity_from_av: bool = True,
+        intensity_from_av: bool = False,
     ) -> None:
-        self.model = model if model is not None else LinearEmotionModel.load()
+        self.model = model if model is not None else load_model()
         self.frontalizer = frontalizer if frontalizer is not None else Frontalizer()
         self.intensity_from_av = intensity_from_av
 

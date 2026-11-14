@@ -1,4 +1,4 @@
-"""Compare regressors on four axes: accuracy, generalisation, jitter, pose invariance.
+"""Compare regressors on five axes: accuracy, generalisation, jitter, pose, external validity.
 
 1. In-distribution: 5-fold CV grouped by person (paired folds across models).
 2. Generalisation: leave-one-database-out (RaFD / KDEF / WSEFEP / FACES).
@@ -9,15 +9,25 @@
 4. Pose invariance: on the multi-pose dataset (Multi-PIE and CAS-PEAL persons only,
    since KDEF persons are also in MorphSet), mean |delta| between the prediction for
    a posed face and the frontal face of the same subject and expression.
+5. External validity: on the same Multi-PIE / CAS-PEAL persons (real, not morphed,
+   expressions, including extremes such as Multi-PIE's scream), the prediction for
+   an expressive face minus that for the subject's neutral face at the same pose.
+   Expected signs: happy -> valence up; disgust -> valence down; surprise, scream ->
+   arousal up. Reported: share of correctly signed contrasts and mean contrast.
+
+``--models a,b`` evaluates only those models and replaces their rows in the
+existing output files (the hybrid ``pls31_kr`` was added after the first run,
+when the kernel model failed on out-of-distribution faces).
 
 PLS / ridge hyper-parameters come from experiment 06 (median one-SE choice).
 Non-linear models get light tuning on one inner split of fold 0's training set.
 
-Outputs: outputs/08_scores.csv, outputs/08_jitter.csv, outputs/08_pose.csv, outputs/08_tuning.csv
+Outputs: outputs/08_scores.csv, 08_jitter.csv, 08_pose.csv, 08_external.csv, 08_tuning.csv
 """
 
 from __future__ import annotations
 
+import argparse
 import time
 from pathlib import Path
 
@@ -70,6 +80,28 @@ class Float64Output(RegressorMixin, BaseEstimator):
         return np.asarray(self.est_.predict(X), dtype=np.float64)
 
 
+class ResidualKernel(RegressorMixin, BaseEstimator):
+    """Linear model plus a kernel model of its residuals.
+
+    Far from the training data the kernel term decays to ~0, so predictions fall
+    back to the linear model instead of collapsing to the mean.
+    """
+
+    def __init__(self, linear, kernel):
+        self.linear = linear
+        self.kernel = kernel
+
+    def fit(self, X, y):
+        X = np.asarray(X, dtype=np.float64)
+        self.linear_ = clone(self.linear).fit(X, y)
+        self.kernel_ = clone(self.kernel).fit(X, y - self.linear_.predict(X))
+        return self
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=np.float64)
+        return self.linear_.predict(X) + self.kernel_.predict(X)
+
+
 def candidate_models(pls_k: int, ridge_alpha: float, n_train: int):
     std = StandardScaler
     hgb = lambda leaves: MultiOutputRegressor(
@@ -84,6 +116,7 @@ def candidate_models(pls_k: int, ridge_alpha: float, n_train: int):
     )
     return {
         "pls": [PLSRegression(pls_k)],
+        "pls31": [PLSRegression(31)],  # the 2021 choice (generalisation-driven)
         "ridge": [make_pipeline(std(), Ridge(alpha=ridge_alpha * n_train))],
         "pca_ridge": [
             make_pipeline(std(), PCA(n, random_state=0), Ridge(alpha=1.0)) for n in (30, 100)
@@ -94,6 +127,18 @@ def candidate_models(pls_k: int, ridge_alpha: float, n_train: int):
             )
             for g in (0.5, 1.0, 2.0)
             for a in (1e-2, 1.0)
+        ],
+        "pls31_kr": [
+            ResidualKernel(
+                PLSRegression(31),
+                make_pipeline(
+                    std(),
+                    Nystroem(gamma=g / 1275, n_components=2000, random_state=0),
+                    Ridge(alpha=a),
+                ),
+            )
+            for g in (0.25, 0.5, 1.0)
+            for a in (1.0, 10.0)
         ],
         "hgb": [hgb(31), hgb(63)],
         "mlp": [
@@ -169,7 +214,39 @@ def pose_rows(model, pose, tags):
     ]
 
 
-def main():
+EXPECTED = {"HA": (1, +1), "DI": (1, -1), "SU": (0, +1), "SC": (0, +1)}  # (target, sign)
+
+
+def external_rows(model, pose, tags):
+    meta = pose.meta
+    ok = (meta.family != "kdef") & (meta.pitch == 0) & (meta.yaw.abs() <= 45)
+    key = meta.subject.astype(str) + "|" + meta.yaw.astype(str)
+    neutral = ok & (meta.expression == "NE")
+    ref = key.map(meta.index.to_series()[neutral].groupby(key[neutral]).first())
+    rows = []
+    for expr, (t, sign) in EXPECTED.items():
+        sel = ok & (meta.expression == expr) & ref.notna()
+        idx, refs = np.flatnonzero(sel), ref[sel].to_numpy(dtype=int)
+        p = np.clip(model.predict(features(pose.landmarks[idx]))[:, t], -1, 1)
+        p0 = np.clip(model.predict(features(pose.landmarks[refs]))[:, t], -1, 1)
+        delta = sign * (p - p0)
+        rows.append(
+            {**tags, "expression": expr, "target": TARGETS[t], "n": len(idx),
+             "sign_acc": float((delta > 0).mean()), "mean_contrast": float(delta.mean())}
+        )  # fmt: skip
+    return rows
+
+
+def _save(rows, name, only):
+    path = OUT / name
+    new = pd.DataFrame(rows)
+    if only and path.exists():
+        old = pd.read_csv(path)
+        new = pd.concat([old[~old.model.isin(only)], new], ignore_index=True)
+    new.to_csv(path, index=False)
+
+
+def main(only: list[str] | None = None):
     ds = load_morphset()
     pose = load_pose_dataset()
     X = features(ds.landmarks)
@@ -181,13 +258,16 @@ def main():
 
     folds = repeated_group_kfold(persons, n_splits=5, n_repeats=1, seed=0)
     f0 = folds[0]
+    candidates = candidate_models(pls_k, ridge_alpha, len(f0.train))
+    if only:
+        candidates = {k: v for k, v in candidates.items() if k in only}
     models, tuning = tune(
-        candidate_models(pls_k, ridge_alpha, len(f0.train)),
+        candidates,
         X[f0.train],
         y[f0.train],
         persons[f0.train],
     )
-    pd.DataFrame(tuning).to_csv(OUT / "08_tuning.csv", index=False)
+    _save(tuning, "08_tuning.csv", only)
 
     schemes = [("cv", f.fold, f.train, f.test) for f in folds]
     datasets = ds.meta.dataset.astype(str).to_numpy()
@@ -196,7 +276,7 @@ def main():
         for d in ("R", "K", "W", "F")
     ]
 
-    scores, jitter, pose_inv = [], [], []
+    scores, jitter, pose_inv, external = [], [], [], []
     for scheme, fold, tr, te in schemes:
         for name, est in models.items():
             t0 = time.time()
@@ -211,16 +291,21 @@ def main():
                 jitter.append(jitter_rows(model, ds.landmarks[sub], model.predict(X[sub]), tags))
                 if fold == 0:
                     pose_inv += pose_rows(model, pose, tags)
+                    external += external_rows(model, pose, tags)
             print(
                 f"{scheme} {fold} {name:<13} "
                 f"ccc A={ccc(y[te, 0], pred[:, 0]):.3f} V={ccc(y[te, 1], pred[:, 1]):.3f} "
                 f"({time.time() - t0:.0f}s)",
                 flush=True,
             )
-        pd.DataFrame(scores).to_csv(OUT / "08_scores.csv", index=False)
-        pd.DataFrame(jitter).to_csv(OUT / "08_jitter.csv", index=False)
-        pd.DataFrame(pose_inv).to_csv(OUT / "08_pose.csv", index=False)
+    _save(scores, "08_scores.csv", only)
+    _save(jitter, "08_jitter.csv", only)
+    _save(pose_inv, "08_pose.csv", only)
+    _save(external, "08_external.csv", only)
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--models", help="comma-separated subset of models (default: all)")
+    args = ap.parse_args()
+    main(args.models.split(",") if args.models else None)

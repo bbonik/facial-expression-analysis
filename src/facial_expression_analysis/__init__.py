@@ -23,7 +23,7 @@ from .geometry import procrustes_normalize
 from .io import load_image
 from .labels import EmotionLabel, describe_emotion
 from .landmarks import BoundingBox, DetectedFace, DlibLandmarkDetector, LandmarkDetector
-from .model import LinearEmotionModel
+from .model import EmotionModel, KernelEmotionModel, LinearEmotionModel, load_model
 from .pipeline import EmotionEstimate, EmotionEstimator, FaceAnalysis
 
 __all__ = [
@@ -33,8 +33,10 @@ __all__ = [
     "EmotionEstimate",
     "EmotionEstimator",
     "EmotionLabel",
+    "EmotionModel",
     "FaceAnalysis",
     "Frontalizer",
+    "KernelEmotionModel",
     "LandmarkDetector",
     "LandmarkSubset",
     "LinearEmotionModel",
@@ -42,5 +44,6 @@ __all__ = [
     "__version__",
     "describe_emotion",
     "load_image",
+    "load_model",
     "procrustes_normalize",
 ]
