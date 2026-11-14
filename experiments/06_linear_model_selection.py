@@ -21,15 +21,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from facial_expression_analysis.data import load_morphset
-from facial_expression_analysis.evaluation import (
+from facial_expression_analysis.training import compute_features
+from facial_expression_analysis.training.data import load_morphset
+from facial_expression_analysis.training.evaluation import (
     pls_path,
     repeated_group_kfold,
     ridge_path,
     score_rows,
 )
-from facial_expression_analysis.metrics import ccc
-from facial_expression_analysis.training import compute_features
+from facial_expression_analysis.training.metrics import ccc
 
 OUT = Path("outputs")
 OUT.mkdir(exist_ok=True)

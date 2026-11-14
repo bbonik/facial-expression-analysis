@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from facial_expression_analysis.features import PairwiseDistanceFeatures
-from facial_expression_analysis.interpret import (
+from facial_expression_analysis.training.interpret import (
     component_region_profile,
     landmark_importance,
     pair_regions,
@@ -59,7 +59,7 @@ def test_vip_and_standardized_coefficients(rng: np.random.Generator) -> None:
 
 def test_equivalent_movement_recovers_mouth_opening(landmarks: np.ndarray) -> None:
     from facial_expression_analysis.frontalization import Frontalizer
-    from facial_expression_analysis.interpret import (
+    from facial_expression_analysis.training.interpret import (
         distance_jacobian,
         equivalent_movement,
         movement_region_shares,

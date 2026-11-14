@@ -36,11 +36,6 @@ train = [
     "pandas>=2.2",
     "pyarrow>=16",
 ]
-notebooks = [
-    "facial-expression-analysis[train]",
-    "jupyterlab>=4",
-    "matplotlib>=3.8",
-]
 demo = [
     "gradio>=5",
 ]
@@ -68,12 +63,11 @@ dev = [
 packages = ["src/facial_expression_analysis"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["/data", "/notebooks", "/.github"]
+exclude = ["/data", "/docs", "/outputs", "/models", "/build", "/.github"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["notebooks/archive"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT", "PTH", "D"]

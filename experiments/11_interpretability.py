@@ -12,8 +12,8 @@ Fits PLS on all of MorphSet and reports:
   action unit; 0 = uniform), compared against random feature directions.
 
 Usage: python experiments/11_interpretability.py --components 31
-Outputs: reports/figures/pls_weights.png, reports/figures/pls_target_movements.png,
-         reports/figures/pls_components.png,
+Outputs: docs/figures/pls_weights.png, docs/figures/pls_target_movements.png,
+         docs/figures/pls_components.png,
          outputs/11_region_shares.csv, outputs/11_component_profile.csv
 """
 
@@ -27,10 +27,10 @@ import numpy as np
 import pandas as pd
 from sklearn.cross_decomposition import PLSRegression
 
-from facial_expression_analysis.data import load_morphset
 from facial_expression_analysis.features import PairwiseDistanceFeatures
 from facial_expression_analysis.frontalization import Frontalizer
-from facial_expression_analysis.interpret import (
+from facial_expression_analysis.training.data import load_morphset
+from facial_expression_analysis.training.interpret import (
     distance_jacobian,
     equivalent_movement,
     movement_region_shares,
@@ -41,7 +41,7 @@ from facial_expression_analysis.interpret import (
     standardized_coefficients,
 )
 
-OUT, FIG = Path("outputs"), Path("reports/figures")
+OUT, FIG = Path("outputs"), Path("docs/figures")
 TARGETS = ("arousal", "valence", "intensity")
 
 

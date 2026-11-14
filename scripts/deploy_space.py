@@ -102,10 +102,10 @@ def build(out: Path = BUILD) -> Path:
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
     )
     (out / "examples").mkdir()
-    for img in sorted((ROOT / "data" / "images").iterdir()):
+    for img in sorted((ROOT / "examples").iterdir()):
         if img.suffix.lower() in {".jpg", ".jpeg", ".png"}:
             shutil.copy2(img, out / "examples" / img.name)
-    figure = ROOT / "reports" / "figures" / "behavioural_smile.png"
+    figure = ROOT / "docs" / "figures" / "behavioural_smile.png"
     if figure.is_file():
         (out / "assets").mkdir()
         shutil.copy2(figure, out / "assets" / figure.name)

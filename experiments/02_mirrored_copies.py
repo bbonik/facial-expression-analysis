@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from facial_expression_analysis.data import load_morphset
+from facial_expression_analysis.training.data import load_morphset
 
 ds = load_morphset()
 m = ds.meta

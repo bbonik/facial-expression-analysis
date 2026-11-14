@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from facial_expression_analysis.evaluation import (
+from facial_expression_analysis.training.evaluation import (
     bootstrap_ci,
     leave_one_group_out,
     paired_difference,

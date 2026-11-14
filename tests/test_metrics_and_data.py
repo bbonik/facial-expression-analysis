@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from facial_expression_analysis.data import assign_person_ids, split_by_group
-from facial_expression_analysis.metrics import ccc, regression_report
+from facial_expression_analysis.training.data import assign_person_ids, split_by_group
+from facial_expression_analysis.training.metrics import ccc, regression_report
 
 
 def test_ccc_perfect_and_biased(rng: np.random.Generator) -> None:

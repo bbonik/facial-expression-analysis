@@ -6,7 +6,8 @@ import pytest
 
 from facial_expression_analysis.constants import LEFT_EYE, MIRROR_PERMUTATION, RIGHT_EYE
 from facial_expression_analysis.frontalization import Frontalizer
-from facial_expression_analysis.frontalization_training import (
+from facial_expression_analysis.geometry import procrustes_normalize
+from facial_expression_analysis.training.frontalization import (
     MirrorMode,
     PoseDataset,
     align_parts_to_template,
@@ -15,7 +16,6 @@ from facial_expression_analysis.frontalization_training import (
     mean_shape,
     mirror_shapes,
 )
-from facial_expression_analysis.geometry import procrustes_normalize
 
 
 def test_mirror_permutation_is_an_involution() -> None:
@@ -73,7 +73,7 @@ def test_build_training_pairs(landmarks: np.ndarray, mode: str, factor: int) -> 
 
 
 def test_fit_frontalization_recovers_linear_map(rng: np.random.Generator) -> None:
-    from facial_expression_analysis.frontalization_training import TrainingPairs
+    from facial_expression_analysis.training.frontalization import TrainingPairs
 
     A = rng.normal(size=(500, 68, 2))
     W = rng.normal(scale=0.05, size=(137, 136))
@@ -88,7 +88,7 @@ def test_fit_frontalization_recovers_linear_map(rng: np.random.Generator) -> Non
 @pytest.mark.slow
 def test_reproduces_2021_weights() -> None:
     from facial_expression_analysis.assets import POSE_DATASET, cache_dir
-    from facial_expression_analysis.frontalization_training import load_pose_dataset
+    from facial_expression_analysis.training.frontalization import load_pose_dataset
 
     if not (cache_dir() / POSE_DATASET.name).is_file():
         pytest.skip("pose dataset not cached")

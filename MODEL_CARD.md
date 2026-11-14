@@ -32,7 +32,7 @@ and shifts the resting point. MorphSet CCC rewards fitting synthetic labels on t
 population and does not measure any of this. The behavioural tests are now part of the
 evaluation.
 
-![Synthetic smile trajectories](reports/figures/behavioural_smile.png)
+![Synthetic smile trajectories](docs/figures/behavioural_smile.png)
 
 Neither model needs scikit-learn at inference. dlib detection takes ~14 ms per image and
 dominates the latency.

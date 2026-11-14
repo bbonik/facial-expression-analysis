@@ -13,7 +13,7 @@ C. Pose stability: std of the prediction across yaw (0 to 45 deg) for the same s
    expression.
 
 Usage: python experiments/12_behavioural_tests.py
-Outputs: outputs/12_behavioural.csv, reports/figures/behavioural_smile.png
+Outputs: outputs/12_behavioural.csv, docs/figures/behavioural_smile.png
 """
 
 from __future__ import annotations
@@ -25,10 +25,10 @@ import numpy as np
 import pandas as pd
 
 from facial_expression_analysis import Frontalizer
-from facial_expression_analysis.frontalization_training import load_pose_dataset
 from facial_expression_analysis.model import KernelEmotionModel, LinearEmotionModel
+from facial_expression_analysis.training.frontalization import load_pose_dataset
 
-OUT, FIG = Path("outputs"), Path("reports/figures")
+OUT, FIG = Path("outputs"), Path("docs/figures")
 # Lip-corner pull: weight of each mouth landmark's displacement and its side (-1 left, +1 right)
 SMILE = {48: (1.0, -1), 54: (1.0, 1), 60: (0.8, -1), 64: (0.8, 1),
          49: (0.4, -1), 59: (0.4, -1), 53: (0.4, 1), 55: (0.4, 1)}  # fmt: skip

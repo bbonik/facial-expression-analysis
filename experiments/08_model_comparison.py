@@ -45,12 +45,12 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from facial_expression_analysis.data import load_morphset
-from facial_expression_analysis.evaluation import repeated_group_kfold, score_rows
 from facial_expression_analysis.features import PairwiseDistanceFeatures
 from facial_expression_analysis.frontalization import Frontalizer
-from facial_expression_analysis.frontalization_training import load_pose_dataset
-from facial_expression_analysis.metrics import ccc
+from facial_expression_analysis.training.data import load_morphset
+from facial_expression_analysis.training.evaluation import repeated_group_kfold, score_rows
+from facial_expression_analysis.training.frontalization import load_pose_dataset
+from facial_expression_analysis.training.metrics import ccc
 
 OUT = Path("outputs")
 TARGETS = ("arousal", "valence", "intensity")

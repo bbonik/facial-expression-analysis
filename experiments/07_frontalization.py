@@ -33,10 +33,10 @@ import pandas as pd
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.model_selection import GroupKFold
 
-from facial_expression_analysis.data import load_morphset
 from facial_expression_analysis.features import PairwiseDistanceFeatures
 from facial_expression_analysis.frontalization import Frontalizer
-from facial_expression_analysis.frontalization_training import (
+from facial_expression_analysis.training.data import load_morphset
+from facial_expression_analysis.training.frontalization import (
     MirrorMode,
     align_parts_to_template,
     assign_pose_persons,

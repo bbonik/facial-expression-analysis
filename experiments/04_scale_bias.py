@@ -5,9 +5,9 @@ import pandas as pd
 from sklearn.cross_decomposition import PLSRegression
 
 from facial_expression_analysis import Frontalizer, PairwiseDistanceFeatures
-from facial_expression_analysis.data import load_morphset, split_by_group
 from facial_expression_analysis.geometry import shape_scale
-from facial_expression_analysis.metrics import ccc
+from facial_expression_analysis.training.data import load_morphset, split_by_group
+from facial_expression_analysis.training.metrics import ccc
 
 ds = load_morphset()
 L = ds.landmarks

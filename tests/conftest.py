@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 DATA = Path(__file__).parent / "data"
-IMAGES = Path(__file__).parents[1] / "data" / "images"
+IMAGES = Path(__file__).parents[1] / "examples"
 
 
 @pytest.fixture(scope="session")

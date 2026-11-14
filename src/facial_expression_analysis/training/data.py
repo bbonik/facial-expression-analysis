@@ -47,9 +47,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from .assets import fetch_morphset
-from .constants import N_LANDMARKS
-from .model import TARGETS
+from ..assets import fetch_morphset
+from ..constants import N_LANDMARKS
+from ..model import TARGETS
 
 META_COLUMNS = ["Filename", "Dataset", "Subject", "Emotion Label", "Agreement"]
 TARGET_COLUMNS = ["Arousal", "Valence", "Intensity"]

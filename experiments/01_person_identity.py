@@ -5,8 +5,8 @@ from collections import Counter
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from facial_expression_analysis.data import load_morphset
 from facial_expression_analysis.geometry import procrustes_normalize
+from facial_expression_analysis.training.data import load_morphset
 
 ds = load_morphset()
 m = ds.meta

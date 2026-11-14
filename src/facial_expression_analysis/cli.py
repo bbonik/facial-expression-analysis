@@ -102,8 +102,8 @@ def train(
     data: Annotated[Path | None, typer.Option(help="Path to Morphset.csv.zip.")] = None,
 ) -> None:
     """Train an emotion model on MorphSet with a person-wise split."""
-    from .data import load_morphset
     from .training import TrainConfig, train_model
+    from .training.data import load_morphset
 
     dataset = load_morphset(data)
     config = TrainConfig(
@@ -127,7 +127,7 @@ def train_frontalization(
     ridge: Annotated[float, typer.Option(min=0.0, help="Per-sample ridge penalty.")] = 0.0,
 ) -> None:
     """Train the landmark frontalization model on the multi-pose dataset."""
-    from .frontalization_training import (
+    from .training.frontalization import (
         MirrorMode,
         build_training_pairs,
         fit_frontalization,
@@ -151,9 +151,9 @@ def evaluate(
     data: Annotated[Path | None, typer.Option(help="Path to Morphset.csv.zip.")] = None,
 ) -> None:
     """Evaluate a model on the held-out test persons of MorphSet."""
-    from .data import load_morphset, split_by_group
     from .model import load_model
     from .training import evaluate_model
+    from .training.data import load_morphset, split_by_group
 
     dataset = load_morphset(data)
     _, val, test = split_by_group(dataset.persons, seed=seed)

@@ -8,7 +8,7 @@ shrinkage towards the mean); person-level bootstrap CIs for the overall CCC.
 Usage: python experiments/10_error_analysis.py --model kernel:0.5,1   (gamma*n_features, alpha)
        (or pls:31, ridge:2.5e-5)
 Outputs: outputs/10_oof_<model>.parquet, outputs/10_breakdown_<model>.csv,
-         reports/figures/error_analysis_<model>.png
+         docs/figures/error_analysis_<model>.png
 """
 
 from __future__ import annotations
@@ -19,17 +19,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from facial_expression_analysis.data import load_morphset
-from facial_expression_analysis.evaluation import (
+from facial_expression_analysis.training import compute_features
+from facial_expression_analysis.training.data import load_morphset
+from facial_expression_analysis.training.evaluation import (
     bootstrap_ci,
     pls_path,
     repeated_group_kfold,
     ridge_path,
 )
-from facial_expression_analysis.metrics import ccc
-from facial_expression_analysis.training import compute_features
+from facial_expression_analysis.training.metrics import ccc
 
-OUT, FIG = Path("outputs"), Path("reports/figures")
+OUT, FIG = Path("outputs"), Path("docs/figures")
 TARGETS = ("arousal", "valence", "intensity")
 
 

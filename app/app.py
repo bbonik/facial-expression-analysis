@@ -40,12 +40,10 @@ from render import (
 )
 
 REPO = "https://github.com/bbonik/facial-expression-analysis"
-EXAMPLES = next(
-    (p for p in (HERE / "examples", HERE.parent / "data" / "images") if p.is_dir()), None
-)
+EXAMPLES = next((p for p in (HERE / "examples", HERE.parent / "examples") if p.is_dir()), None)
 FIGURE = next(
     (p for p in (HERE / "assets" / "behavioural_smile.png",
-                 HERE.parent / "reports" / "figures" / "behavioural_smile.png") if p.is_file()),
+                 HERE.parent / "docs" / "figures" / "behavioural_smile.png") if p.is_file()),
     None,
 )  # fmt: skip
 

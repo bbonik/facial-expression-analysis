@@ -37,10 +37,10 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from .assets import fetch_pose_dataset
-from .constants import MIRROR_PERMUTATION, N_LANDMARKS
+from ..assets import fetch_pose_dataset
+from ..constants import MIRROR_PERMUTATION, N_LANDMARKS
+from ..geometry import procrustes_normalize
 from .data import LANDMARK_COLUMNS
-from .geometry import procrustes_normalize
 
 FloatArray = NDArray[np.float64]
 

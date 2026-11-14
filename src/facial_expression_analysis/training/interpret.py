@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from .constants import LEFT_BROW, LEFT_EYE, NOSE_BASE, NOSE_BRIDGE, RIGHT_BROW, RIGHT_EYE
+from ..constants import LEFT_BROW, LEFT_EYE, NOSE_BASE, NOSE_BRIDGE, RIGHT_BROW, RIGHT_EYE
 
 FloatArray = NDArray[np.float64]
 
@@ -107,7 +107,7 @@ def plot_pair_weights(
     Red: the distance increases the output; blue: it decreases it. Line width
     and opacity scale with |weight|.
     """
-    from .viz import plot_landmarks
+    from ..viz import plot_landmarks
 
     plot_landmarks(shape, ax=ax, color="0.75")
     order = np.argsort(-np.abs(weights))[:top]
@@ -170,7 +170,7 @@ def plot_movement(
     ax: Any, shape: FloatArray, movement: FloatArray, title: str | None = None
 ) -> Any:
     """Draw a facial movement as arrows on a face shape."""
-    from .viz import plot_landmarks
+    from ..viz import plot_landmarks
 
     plot_landmarks(shape, ax=ax, color="0.75")
     mag = np.linalg.norm(movement, axis=1)

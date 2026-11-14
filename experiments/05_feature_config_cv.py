@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 
 from facial_expression_analysis import Frontalizer, PairwiseDistanceFeatures
-from facial_expression_analysis.data import load_morphset
 from facial_expression_analysis.training import cross_validate_pls
+from facial_expression_analysis.training.data import load_morphset
 
 ds = load_morphset()
 F = Frontalizer()(ds.landmarks)

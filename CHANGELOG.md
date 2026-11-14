@@ -26,6 +26,12 @@
 - The webcam demo could not be closed with `q`.
 
 ### Changed
+- Repository reorganised. Training-only modules moved to `facial_expression_analysis.training`
+  (`data`, `train`, `evaluation`, `metrics`, `frontalization`, `interpret`); it is loaded
+  lazily, so the core install (`fea predict`, `fea webcam`) no longer imports pandas. Sample
+  photos are in `examples/`, figures and screenshots in `docs/`. The archived 2021 notebook,
+  the old README images and the `notebooks` extra were removed (the 2021 code remains at tag
+  `v1.0.0`). The README was rewritten with installation, usage and a scientific section.
 - **Model selection on accuracy and behaviour.** Seven regressors were compared offline on
   five axes (`experiments/08_model_comparison.py`). RBF kernel ridge had the best accuracy:
   +0.086 / +0.043 / +0.053 CCC (A/V/I) over PLS(31) in person-grouped CV, winning every
@@ -72,7 +78,7 @@
   pre-commit hooks.
 - `fea benchmark` for latency per pipeline stage.
 - `cross_validate_pls` for grouped k-fold evaluation.
-- `evaluation.py`: repeated grouped k-fold, leave-one-group-out, Nadeau–Bengio corrected
+- `training/evaluation.py`: repeated grouped k-fold, leave-one-group-out, Nadeau–Bengio corrected
   paired tests, person-level bootstrap CIs, and one-fit regularisation paths for PLS and ridge.
 - `fea train --estimator kernel_ridge|pls` and `fea train-frontalization`. The multi-pose
   frontalization data is now a pinned, hash-verified download; retraining reproduces the 2021
@@ -80,7 +86,7 @@
 - `KernelEmotionModel.basis_distance`: distance to the nearest training face, a reliability
   signal for unusual faces or bad landmark fits. Validation quantiles are stored in the model
   metadata.
-- `interpret.py`: VIP scores, region shares, and the facial movement encoded by each PLS
+- `training/interpret.py`: VIP scores, region shares, and the facial movement encoded by each PLS
   component. 17 of 31 components are localised movements resembling action units.
 - Web demo: several faces are tracked at once, each with its own number, colour, trail and
   card. **Calibrate neutral** removes a person's resting-face offset: identity-only, per face
@@ -105,7 +111,7 @@
   night-time webcam video: A/V jitter 0.236 → 0.113, landmark error 2.8% → 1.6%, frames
   without a face 10% → 6%; also about 2x faster.
 - `experiments/01–13`: reproducible analyses behind every claim, with figures in
-  `reports/figures/`.
+  `docs/figures/`.
 
 ## [1.0.0] - 2021
 Original release.

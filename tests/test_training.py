@@ -12,7 +12,6 @@ from facial_expression_analysis import (
     LinearEmotionModel,
     PairwiseDistanceFeatures,
 )
-from facial_expression_analysis.data import MorphSet
 from facial_expression_analysis.training import (
     Estimator,
     TrainConfig,
@@ -21,6 +20,7 @@ from facial_expression_analysis.training import (
     train_model,
     train_pls,
 )
+from facial_expression_analysis.training.data import MorphSet
 
 
 @pytest.fixture(scope="module")

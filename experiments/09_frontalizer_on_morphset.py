@@ -11,14 +11,14 @@ from pathlib import Path
 import pandas as pd
 from sklearn.cross_decomposition import PLSRegression
 
-from facial_expression_analysis.data import load_morphset
-from facial_expression_analysis.evaluation import (
+from facial_expression_analysis.features import PairwiseDistanceFeatures
+from facial_expression_analysis.frontalization import Frontalizer
+from facial_expression_analysis.training.data import load_morphset
+from facial_expression_analysis.training.evaluation import (
     paired_difference,
     repeated_group_kfold,
     score_rows,
 )
-from facial_expression_analysis.features import PairwiseDistanceFeatures
-from facial_expression_analysis.frontalization import Frontalizer
 
 OUT = Path("outputs")
 ds = load_morphset()

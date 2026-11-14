@@ -8,7 +8,8 @@
 #   scripts/demo.sh --upsample 1        # find smaller / more distant faces (slower)
 #   scripts/demo.sh --model my.npz      # a model trained with `fea train`
 #
-# Keys in the demo: m switch model (PLS / kernel), -/+ smoothing, l landmarks, q or Esc quit.
+# Keys in the demo: m switch model (PLS / kernel), t tracking, -/+ smoothing, l landmarks,
+# q or Esc quit. Pass --no-track to start without landmark tracking.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -31,5 +32,5 @@ if [ "$(uname)" = "Darwin" ]; then
     echo "    reopen the terminal and run this script again."
 fi
 
-echo "==> Starting the demo. Keys: m model | -/+ smoothing | l landmarks | q quit"
+echo "==> Starting the demo. Keys: m model | t tracking | -/+ smoothing | l landmarks | q quit"
 exec uv run --quiet fea webcam "$@"
