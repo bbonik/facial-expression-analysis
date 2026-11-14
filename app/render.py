@@ -220,6 +220,14 @@ def _bar(name: str, value: float, bipolar: bool, color: str) -> str:
     )
 
 
+def status_banner(text: str, kind: str = "info") -> str:
+    """Calibration progress / result shown above the estimates."""
+    return f'<div class="fea-status fea-status-{kind}">{html.escape(text)}</div>'
+
+
+CALIBRATED_CHIP = '<span class="fea-chip">calibrated</span>'
+
+
 def fit_badge(distance: float | None, p50: float | None, p99: float | None) -> str:
     if distance is None or p99 is None:
         return ""
@@ -256,6 +264,7 @@ def metrics_card(
     fit: tuple[float | None, float | None, float | None] = (None, None, None),
     footer: str = "",
     hint: tuple[str, str] = LIVE_HINT,
+    calibrated: bool = False,
 ) -> str:
     """Large label, A/V/I bars and the fit badge for the tracked face."""
     if point is None:
@@ -268,7 +277,9 @@ def metrics_card(
     )
     return (
         '<div class="fea-card">'
-        f'<div class="fea-kicker">{html.escape(model_name)}</div>'
+        f'<div class="fea-kicker">{html.escape(model_name)}'
+        + (" " + CALIBRATED_CHIP if calibrated else "")
+        + "</div>"
         f'<div class="fea-label" style="color:{color}">{html.escape(point.label)}</div>'
         f'<div class="fea-metrics">{bars}</div>'
         f"{fit_badge(*fit)}"
@@ -296,6 +307,28 @@ def faces_grid(rows: Sequence[tuple[Point, str]]) -> str:
 
 
 # --------------------------------------------------------------------------- overlay
+def draw_countdown(rgb: NDArray[np.uint8], number: int, text: str) -> NDArray[np.uint8]:
+    """Dim the frame and draw a large countdown number (0: only the text) in the centre."""
+    import cv2
+
+    h, w = rgb.shape[:2]
+    out = cv2.addWeighted(rgb, 0.55, np.zeros_like(rgb), 0.45, 0)
+    scale = max(h, w) / 640
+    if number > 0:
+        label = str(number)
+        fs = 4.0 * scale
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_DUPLEX, fs, max(2, int(6 * scale)))
+        cv2.putText(out, label, ((w - tw) // 2, (h + th) // 2 - int(20 * scale)),
+                    cv2.FONT_HERSHEY_DUPLEX, fs, (196, 181, 253), max(2, int(6 * scale)),
+                    cv2.LINE_AA)  # fmt: skip
+    fs = 0.75 * scale
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, fs, 1)
+    y = (h + th) // 2 + int(70 * scale) if number > 0 else (h + th) // 2
+    cv2.putText(out, text, ((w - tw) // 2, y), cv2.FONT_HERSHEY_DUPLEX, fs, (240, 244, 255), 1,
+                cv2.LINE_AA)  # fmt: skip
+    return out
+
+
 def draw_overlay(
     rgb: NDArray[np.uint8],
     boxes: Sequence[tuple[int, int, int, int]],

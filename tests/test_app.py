@@ -154,3 +154,75 @@ def test_engine_on_sample_photo() -> None:
     assert [f.point.tag for f in faces] == ["1", "2"]
     assert all(f.distance is not None and f.distance > 0 for f in faces)
     assert engine.p99 is not None
+
+
+# ----------------------------------------------------------------------------- calibration
+def _calibrate(state: LiveState, frames: list[list[FaceResult]], neutral, p99=26.0) -> LiveState:
+    """Run a calibration over the given frames, skipping the countdown."""
+    import time as _time
+
+    from core import COLLECT_S, COUNTDOWN_S, CalibrationRun, calibration_step
+
+    state.calibration = CalibrationRun(start=_time.perf_counter() - COUNTDOWN_S - COLLECT_S)
+    for faces in frames:
+        state, seen = update_tracks(state, faces, state.model, 0.0)
+        calibration_step(state, seen, np.asarray(neutral, dtype=float), p99)
+    return state
+
+
+def test_calibration_removes_only_the_identity_offset() -> None:
+    from core import calibration_status, is_calibrated
+
+    neutral_mean = [0.1, -0.12, 0.3]
+    state = LiveState()
+    resting = _face(-0.1, -0.4)  # this person's neutral face reads A -0.1, V -0.4
+    state = _calibrate(state, [[resting]] * 8, neutral_mean)
+    assert state.calibration is None
+    assert is_calibrated(state, 1)
+    np.testing.assert_allclose(state.offsets[(1, state.model)][:2], [-0.2, -0.28])
+    assert calibration_status(state)[1] == "ok"
+    # the neutral face now reads like the average neutral face, not like (0, 0)
+    state, seen = update_tracks(state, [resting], state.model, 0.0)
+    assert seen[0][2].arousal == pytest.approx(0.1)
+    assert seen[0][2].valence == pytest.approx(-0.12)
+    # and a smile is shifted by the same offset
+    state, seen = update_tracks(state, [_face(0.1, 0.4)], state.model, 0.0)
+    assert seen[0][2].valence == pytest.approx(0.68)
+
+
+def test_calibration_rejects_non_neutral_and_poor_fits() -> None:
+    from core import calibration_status, is_calibrated
+
+    smiling = _calibrate(LiveState(), [[_face(0.3, 0.6)]] * 8, [0.1, -0.12, 0.3])
+    assert not is_calibrated(smiling, 1)
+    assert "did not look neutral" in calibration_status(smiling)[0]
+
+    bad_fit = FaceResult((0, 0, 100, 100), np.zeros((68, 2)), Point(0, 0, 0.3, "x"), 40.0)
+    poor = _calibrate(LiveState(), [[bad_fit]] * 8, [0.1, -0.12, 0.3], p99=26.0)
+    assert not is_calibrated(poor, 1)
+    assert "landmark fit" in calibration_status(poor)[0]
+
+
+def test_calibration_is_per_model_and_reset_clears_it() -> None:
+    from core import handle_buttons, is_calibrated
+
+    state = _calibrate(LiveState(model="A"), [[_face(-0.1, -0.4)]] * 8, [0.1, -0.12, 0.3])
+    assert is_calibrated(state, 1)
+    update_tracks(state, [_face(-0.1, -0.4)], "B", 0.0)  # switch model: not calibrated there
+    assert not is_calibrated(state, 1)
+    update_tracks(state, [_face(-0.1, -0.4)], "A", 0.0)  # back: the calibration is kept
+    assert is_calibrated(state, 1)
+    handle_buttons(state, calibrate_clicks=0, reset_clicks=1)
+    assert not is_calibrated(state, 1)
+
+
+def test_calibration_button_counter_starts_a_run() -> None:
+    from core import calibration_status, countdown_number, handle_buttons
+
+    state = LiveState()
+    handle_buttons(state, calibrate_clicks=1, reset_clicks=0)
+    assert state.calibration is not None
+    assert countdown_number(state) == 3
+    assert "neutral face" in calibration_status(state)[0]
+    handle_buttons(state, calibrate_clicks=1, reset_clicks=0)  # same counter: no new run
+    assert state.calibrate_clicks == 1

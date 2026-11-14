@@ -106,6 +106,29 @@ worse on jitter, pose and scream, so it was not adopted.
   arousal 0.39 / 0.47, valence 0.64 / 0.67.
 - Mirrored faces are predicted as well as the originals.
 
+## Per-person calibration (web demo)
+
+Two neutral photos of the same person produce similar offsets (r ≈ 0.8). The model's reading
+of a neutral face therefore depends partly on the person's resting face. The web demo's
+**Calibrate neutral** button averages ~1.5 s of a person's neutral face. It then removes only
+the **identity offset**: the difference between this person's neutral reading and the average
+neutral reading of unseen people, stored as `neutral_mean` in the model metadata (PLS:
+A 0.10, V −0.12, I 0.32). Simulated on MorphSet (one neutral photo per person, out of fold):
+
+| Calibration (PLS(31)) | ΔCCC A / V / I |
+|---|---|
+| Identity offset only (implemented) | +0.01 / −0.01 / −0.06 |
+| Subtract own neutral reading (neutral → exactly 0) | −0.04 / −0.06 / −0.33 |
+| … with intensity stretched instead of shifted | −0.04 / −0.06 / −0.16 |
+| Global neutral-anchored rescaling (no calibration) | +0.03 / −0.04 / −0.18 |
+
+Every variant that makes a neutral face read exactly (0, 0, 0) costs accuracy on expressive
+faces. The model's errors near neutral are biased: intensity cannot go below 0, so a neutral
+face reads ≈ 0.3 for everyone. With the implemented calibration, a person's neutral face
+reads like the average neutral face, which can carry a "slightly …" label. Global variance-
+matching rescaling would raise CCC (+0.04 / +0.02 / +0.05). It was not adopted because it
+amplifies jitter by 1.2–1.4× and barely moves neutral.
+
 ## Limitations
 
 - **Synthetic labels.** The training targets are morph interpolations between posed

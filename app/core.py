@@ -37,16 +37,26 @@ class Track:
     """One face followed across frames, with its own smoothing state and trail."""
 
     id: int
-    ema: NDArray[np.float64]
+    ema: NDArray[np.float64] | None
     center: tuple[float, float]
     size: float
     distance: float | None = None
     trail: list[tuple[float, float]] = field(default_factory=list)
     missed: int = 0
+    raw: NDArray[np.float64] | None = None  # this frame's uncalibrated (A, V, I)
 
     @property
     def color(self) -> str:
         return TRACK_COLORS[(self.id - 1) % len(TRACK_COLORS)]
+
+
+@dataclass
+class CalibrationRun:
+    """A calibration in progress: countdown, then collecting raw neutral predictions."""
+
+    start: float
+    samples: dict[int, list[NDArray[np.float64]]] = field(default_factory=dict)
+    distances: dict[int, list[float]] = field(default_factory=dict)
 
 
 @dataclass
@@ -57,6 +67,14 @@ class LiveState:
     model: str = DEFAULT_MODEL
     last_t: float = 0.0
     fps: float = 0.0
+    # per-person calibration: (track id, model) -> offset subtracted from (A, V, I)
+    offsets: dict[tuple[int, str], NDArray[np.float64]] = field(default_factory=dict)
+    calibration: CalibrationRun | None = None
+    calibrate_clicks: int = 0
+    reset_clicks: int = 0
+    message: str = ""
+    message_kind: str = "info"  # info / ok / warn
+    message_until: float = 0.0
 
 
 class Engine:
@@ -74,6 +92,11 @@ class Engine:
         self.detector_photo = DlibLandmarkDetector(upsample=1, max_width=1280)
         q = self.kernel.metadata.get("basis_distance_quantiles", {})
         self.p50, self.p99 = q.get("0.5"), q.get("0.99")
+        # average raw prediction for neutral faces of unseen people (calibration target)
+        self.neutral = {
+            k: np.asarray(m.metadata.get("neutral_mean", [0.0, 0.0, 0.0]), dtype=np.float64)
+            for k, m in models.items()
+        }
 
     def analyze(
         self, rgb: NDArray[np.uint8], model: str, *, photo: bool = False
@@ -141,8 +164,10 @@ def update_tracks(
         inst = 1.0 / max(now - state.last_t, 1e-6)
         state.fps = inst if not state.fps else 0.85 * state.fps + 0.15 * inst
     state.last_t = now
-    if model != state.model:
-        state.tracks, state.model = [], model
+    if model != state.model:  # keep identities (and calibrations), restart smoothing
+        for t in state.tracks:
+            t.ema, t.trail = None, []
+        state.model, state.calibration = model, None
 
     faces = sorted(faces, key=lambda f: -_geometry(f)[1])[:MAX_FACES]
     geo = [_geometry(f) for f in faces]
@@ -162,16 +187,17 @@ def update_tracks(
     s = float(np.clip(smoothing, 0.0, 0.95))
     seen: list[tuple[Track, FaceResult]] = []
     for fi, face in enumerate(faces):
-        current = np.array([face.point.arousal, face.point.valence, face.point.intensity])
+        raw = np.array([face.point.arousal, face.point.valence, face.point.intensity])
         track = assigned.get(fi)
         if track is None:
             taken = {t.id for t in state.tracks}
             new_id = next(k for k in range(1, len(taken) + 2) if k not in taken)
-            track = Track(new_id, current.copy(), *geo[fi])
+            track = Track(new_id, None, *geo[fi])
             state.tracks.append(track)
-        else:
-            track.ema = s * track.ema + (1 - s) * current
-            track.center, track.size = geo[fi]
+        track.center, track.size = geo[fi]
+        track.raw = raw
+        current = apply_offset(raw, state.offsets.get((track.id, model)))
+        track.ema = current if track.ema is None else s * track.ema + (1 - s) * current
         track.missed = 0
         track.distance = face.distance
         a, v = float(track.ema[0]), float(track.ema[1])
@@ -181,11 +207,15 @@ def update_tracks(
     for t in state.tracks:
         if t.id not in seen_ids:
             t.missed += 1
+    dropped = {t.id for t in state.tracks if t.missed > max_missed}
     state.tracks = sorted((t for t in state.tracks if t.missed <= max_missed), key=lambda t: t.id)
+    # a dropped face's calibration goes with it (its number may be reused by someone else)
+    state.offsets = {k: v for k, v in state.offsets.items() if k[0] not in dropped}
 
     multi = len(seen) > 1
     out = []
     for track, face in sorted(seen, key=lambda x: x[0].id):
+        assert track.ema is not None
         a, v, i = (float(x) for x in track.ema)
         point = Point(
             a, v, i, str(describe_emotion(a, v, i)),
@@ -193,3 +223,124 @@ def update_tracks(
         )  # fmt: skip
         out.append((track, face, point))
     return state, out
+
+
+# ----------------------------------------------------------------------------- calibration
+COUNTDOWN_S = 3.0  # time to settle into a neutral face
+COLLECT_S = 1.5  # averaging window
+MIN_SAMPLES = 6
+TIMEOUT_S = 8.0
+MAX_OFFSET = 0.45  # larger A/V offsets mean the face was probably not neutral
+
+
+def apply_offset(
+    raw: NDArray[np.float64], offset: NDArray[np.float64] | None
+) -> NDArray[np.float64]:
+    """Subtract a person's offset; keep A, V in [-1, 1] and I in [0, 1]."""
+    if offset is None:
+        return raw
+    out = raw - offset
+    return np.array([np.clip(out[0], -1, 1), np.clip(out[1], -1, 1), np.clip(out[2], 0, 1)])
+
+
+def _say(state: LiveState, text: str, kind: str = "info", seconds: float = 4.0) -> None:
+    state.message, state.message_kind = text, kind
+    state.message_until = time.perf_counter() + seconds
+
+
+def handle_buttons(state: LiveState, calibrate_clicks: int, reset_clicks: int) -> None:
+    """React to button presses (counters only ever grow; a change means a click)."""
+    if reset_clicks != state.reset_clicks:
+        state.reset_clicks = reset_clicks
+        state.offsets = {k: v for k, v in state.offsets.items() if k[1] != state.model}
+        state.calibration = None
+        for t in state.tracks:
+            t.ema, t.trail = None, []
+        _say(state, "Calibration reset", "info", 2.5)
+    if calibrate_clicks != state.calibrate_clicks:
+        state.calibrate_clicks = calibrate_clicks
+        state.calibration = CalibrationRun(start=time.perf_counter())
+
+
+def calibration_status(state: LiveState) -> tuple[str, str] | None:
+    """(text, kind) to show now, or None."""
+    run = state.calibration
+    if run is not None:
+        elapsed = time.perf_counter() - run.start
+        if elapsed < COUNTDOWN_S:
+            return f"Hold a relaxed, neutral face… {int(COUNTDOWN_S - elapsed) + 1}", "info"
+        return "Calibrating… keep still", "info"
+    if state.message and time.perf_counter() < state.message_until:
+        return state.message, state.message_kind
+    return None
+
+
+def countdown_number(state: LiveState) -> int | None:
+    """Seconds left in the countdown (0 while collecting), or None if not calibrating."""
+    run = state.calibration
+    if run is None:
+        return None
+    elapsed = time.perf_counter() - run.start
+    return int(COUNTDOWN_S - elapsed) + 1 if elapsed < COUNTDOWN_S else 0
+
+
+def calibration_step(
+    state: LiveState,
+    seen: list[tuple[Track, FaceResult, Point]],
+    neutral_mean: NDArray[np.float64],
+    p99: float | None,
+) -> None:
+    """Advance a calibration run with this frame's faces; finish it when ready.
+
+    The offset is identity-only: ``mean(raw neutral) - neutral_mean``. A person's neutral
+    face is aligned with the average neutral face of unseen people, which removes their
+    resting-face offset without shifting every expression by the model's general bias
+    at neutral (measured on MorphSet; see the model card).
+    """
+    run = state.calibration
+    if run is None:
+        return
+    elapsed = time.perf_counter() - run.start
+    if elapsed < COUNTDOWN_S:
+        return
+    for track, face, _ in seen:
+        if track.raw is not None:
+            run.samples.setdefault(track.id, []).append(track.raw)
+            if face.distance is not None:
+                run.distances.setdefault(track.id, []).append(face.distance)
+    collected = max((len(v) for v in run.samples.values()), default=0)
+    if elapsed < COUNTDOWN_S + COLLECT_S or (collected < MIN_SAMPLES and elapsed < TIMEOUT_S):
+        return
+
+    state.calibration = None
+    done, rejected = [], []
+    for tid, samples in sorted(run.samples.items()):
+        if len(samples) < 3:
+            continue
+        dist = run.distances.get(tid, [])
+        if p99 is not None and dist and float(np.median(dist)) > p99:
+            rejected.append(f"face {tid}: poor landmark fit")
+            continue
+        offset = np.mean(samples, axis=0) - neutral_mean
+        if float(np.hypot(offset[0], offset[1])) > MAX_OFFSET:
+            rejected.append(f"face {tid}: that did not look neutral")
+            continue
+        state.offsets[(tid, state.model)] = offset
+        for t in state.tracks:  # restart smoothing from the calibrated value
+            if t.id == tid:
+                t.ema, t.trail = None, []
+        done.append(tid)
+    many = len(state.tracks) > 1
+    if done and not rejected:
+        who = f" (face {', '.join(map(str, done))})" if many else ""
+        _say(state, f"Calibrated{who}", "ok", 4.0)
+    elif done:
+        _say(state, f"Calibrated face {', '.join(map(str, done))}; " + "; ".join(rejected), "warn")
+    elif rejected:
+        _say(state, "Calibration failed: " + "; ".join(rejected) + ". Try again.", "warn", 5.0)
+    else:
+        _say(state, "Calibration failed: no face seen long enough. Try again.", "warn", 5.0)
+
+
+def is_calibrated(state: LiveState, track_id: int) -> bool:
+    return (track_id, state.model) in state.offsets

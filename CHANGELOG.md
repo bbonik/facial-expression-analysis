@@ -82,6 +82,10 @@
   metadata.
 - `interpret.py`: VIP scores, region shares, and the facial movement encoded by each PLS
   component. 17 of 31 components are localised movements resembling action units.
+- Web demo: several faces are tracked at once, each with its own number, colour, trail and
+  card. **Calibrate neutral** removes a person's resting-face offset: identity-only, per face
+  and per model, with a countdown and checks for non-neutral faces and poor fits (see the
+  model card). Models now store `neutral_mean`.
 - **Gradio web demo** (`app/`). It has live webcam and photo tabs, a custom SVG circumplex
   with the 24 emotion words and a trail, metric cards, a landmark-fit reliability badge and
   a live model switch. `scripts/deploy_space.sh` deploys it as a self-contained Hugging Face

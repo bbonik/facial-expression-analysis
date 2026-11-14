@@ -16,13 +16,27 @@ sys.path.insert(0, str(HERE))
 
 import gradio as gr
 import numpy as np
-from core import DEFAULT_MODEL, MODELS, Engine, LiveState, update_tracks
+from core import (
+    DEFAULT_MODEL,
+    MODELS,
+    Engine,
+    LiveState,
+    calibration_status,
+    calibration_step,
+    countdown_number,
+    handle_buttons,
+    is_calibrated,
+    update_tracks,
+)
 from render import (
+    CALIBRATED_CHIP,
     circumplex_svg,
+    draw_countdown,
     draw_overlay,
     faces_grid,
     fit_badge,
     metrics_card,
+    status_banner,
 )
 
 REPO = "https://github.com/bbonik/facial-expression-analysis"
@@ -65,8 +79,9 @@ def _wrap_svg(svg: str) -> str:
     return f'<div class="fea-circumplex-wrap">{svg}</div>'
 
 
-def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
+def live_step(frame, model, smoothing, show_landmarks, calibrate_clicks, reset_clicks, state):
     state = state or LiveState()
+    handle_buttons(state, int(calibrate_clicks or 0), int(reset_clicks or 0))
     if frame is None:
         return (
             None,
@@ -77,6 +92,7 @@ def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
     frame = np.ascontiguousarray(frame[..., :3], dtype=np.uint8)
     faces = ENGINE.analyze(frame, model)
     state, seen = update_tracks(state, faces, model, smoothing)
+    calibration_step(state, seen, ENGINE.neutral[model], ENGINE.p99)
     points = [p for _, _, p in seen]
     overlay = draw_overlay(
         frame,
@@ -85,22 +101,38 @@ def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
         points,
         show_landmarks=show_landmarks,
     )
+    count = countdown_number(state)
+    if count is not None:
+        overlay = draw_countdown(
+            overlay, count, "Hold a relaxed, neutral face" if count else "Calibrating... keep still"
+        )
     footer = f"{state.fps:.0f} fps · smoothing {smoothing:.2f}" if state.fps else ""
     if len(seen) <= 1:  # one face: the full card
-        face = seen[0][1] if seen else None
+        track, face = (seen[0][0], seen[0][1]) if seen else (None, None)
         card = metrics_card(
             points[0] if points else None,
             model_name=model,
             fit=ENGINE.fit(face.distance if face else None),
             footer=footer,
+            calibrated=track is not None and is_calibrated(state, track.id),
         )
     else:  # several faces: one compact card each, in the face's colour
-        rows = [(p, fit_badge(*ENGINE.fit(f.distance))) for _, f, p in seen]
+        rows = [
+            (
+                p,
+                (CALIBRATED_CHIP if is_calibrated(state, t.id) else "")
+                + fit_badge(*ENGINE.fit(f.distance)),
+            )
+            for t, f, p in seen
+        ]
         card = (
             f'<div class="fea-card"><div class="fea-kicker">{model} · {len(seen)} faces</div>'
             f'<div style="margin-top:10px">{faces_grid(rows)}</div>'
             f'<div class="fea-footer">{footer}</div></div>'
         )
+    status = calibration_status(state)
+    if status is not None:
+        card = status_banner(*status) + card
     trails = [(t.trail, t.color if len(seen) > 1 else "") for t, _, _ in seen]
     return overlay, _wrap_svg(circumplex_svg(points, trails, size=640)), card, state
 
@@ -283,6 +315,27 @@ def build() -> gr.Blocks:
                             info="Higher is calmer but slower to react.",
                         )  # fmt: skip
                         show_lm = gr.Checkbox(True, label="Show landmarks")
+                        with gr.Row(elem_classes="fea-calib-row"):
+                            calibrate_btn = gr.Button(
+                                "Calibrate neutral", size="sm", elem_classes="fea-calibrate"
+                            )
+                            reset_btn = gr.Button("Reset", size="sm", elem_classes="fea-reset")
+                        gr.HTML(
+                            '<div class="fea-hint">Look at the camera with a relaxed, neutral '
+                            "face and press <b>Calibrate neutral</b>: your personal resting-face "
+                            "offset is removed (per face and per model, for this session).</div>",
+                            elem_classes="fea-html-plain",
+                        )
+                        # Clicks are passed to the stream as counters, so a click can never be
+                        # overwritten by a frame that is still being processed.
+                        calibrate_clicks = gr.Number(0, visible=False)
+                        reset_clicks = gr.Number(0, visible=False)
+                        calibrate_btn.click(
+                            lambda n: (n or 0) + 1, calibrate_clicks, calibrate_clicks, queue=False
+                        )
+                        reset_btn.click(
+                            lambda n: (n or 0) + 1, reset_clicks, reset_clicks, queue=False
+                        )
                         if ALLOW_QUIT:
                             quit_btn = gr.Button(
                                 "Quit demo", variant="stop", size="sm",
@@ -298,7 +351,7 @@ def build() -> gr.Blocks:
                         )
                 cam.stream(
                     live_step,
-                    [cam, model, smoothing, show_lm, state],
+                    [cam, model, smoothing, show_lm, calibrate_clicks, reset_clicks, state],
                     [live_img, live_circ, live_card, state],
                     stream_every=0.08,
                     time_limit=600,

@@ -190,6 +190,7 @@ def train_model(data: MorphSet, config: TrainConfig | None = None) -> TrainResul
         "test": evaluate_model(model, data.subset(test), features[test]),
     }
     model.metadata["metrics"] = metrics
+    model.metadata["neutral_mean"] = neutral_mean(model, data.subset(val), features[val])
     if isinstance(model, KernelEmotionModel):
         # reference distribution of the reliability signal (distance to the training faces)
         dist = model.basis_distance(features[val])
@@ -197,6 +198,25 @@ def train_model(data: MorphSet, config: TrainConfig | None = None) -> TrainResul
             str(q): float(np.quantile(dist, q)) for q in (0.5, 0.95, 0.99)
         }
     return TrainResult(model=model, metrics=metrics, config=config, timings=timings)
+
+
+def neutral_mean(
+    model: EmotionModel, data: MorphSet, features: NDArray[np.float32] | None = None
+) -> list[float]:
+    """Mean raw prediction for neutral faces (persons not used in training).
+
+    Because predictions shrink towards the dataset mean, neutral faces do not map to
+    (0, 0) on average. Per-person calibration aligns a person's neutral face with this
+    population mean, removing only the person-specific offset (see the model card).
+    """
+    if features is None:
+        features = compute_features(data.landmarks, model.features)
+    neutral = (data.meta["label"].astype(str) == "NE").to_numpy().copy()
+    if "mirrored" in data.meta:
+        neutral &= ~data.meta["mirrored"].to_numpy(dtype=bool)
+    if not neutral.any():
+        return [0.0] * len(model.targets)
+    return [float(x) for x in model.predict_features(features[neutral]).mean(axis=0)]
 
 
 def train_pls(data: MorphSet, config: TrainConfig | None = None) -> TrainResult:
