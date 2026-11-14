@@ -45,7 +45,12 @@ def _wrap_svg(svg: str) -> str:
 def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
     state = state or LiveState()
     if frame is None:
-        return None, _wrap_svg(circumplex_svg()), metrics_card(None, model_name=model), state
+        return (
+            None,
+            _wrap_svg(circumplex_svg(size=560)),
+            metrics_card(None, model_name=model),
+            state,
+        )
     frame = np.ascontiguousarray(frame[..., :3], dtype=np.uint8)
     faces = ENGINE.analyze(frame, model)
     face = largest(faces)
@@ -65,7 +70,7 @@ def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
         footer=footer,
     )
     points = [smoothed] if smoothed else []
-    return overlay, _wrap_svg(circumplex_svg(points, state.trail)), card, state
+    return overlay, _wrap_svg(circumplex_svg(points, state.trail, size=560)), card, state
 
 
 def analyze_photo(image, model, show_landmarks):
@@ -170,6 +175,22 @@ FORCE_DARK = """
   document.documentElement.classList.add('dark');
   document.body.classList.add('dark');
   document.querySelector('gradio-app')?.classList.add('dark');
+  // The streaming webcam's button says "Record"/"Stop", but nothing is recorded:
+  // relabel it as what it does.
+  const labels = {'Record': 'Start analysis', 'Stop': 'Stop analysis'};
+  const relabel = () => {
+    document.querySelectorAll('.fea-cam button').forEach(btn => {
+      const walker = document.createTreeWalker(btn, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const t = node.nodeValue.trim();
+        if (labels[t]) node.nodeValue = node.nodeValue.replace(t, labels[t]);
+      }
+    });
+  };
+  new MutationObserver(relabel).observe(document.body,
+    {subtree: true, childList: true, characterData: true});
+  relabel();
 }
 """
 
@@ -181,30 +202,41 @@ def build() -> gr.Blocks:
         with gr.Tabs():
             with gr.Tab("Live", id="live"):
                 state = gr.State(LiveState())
-                with gr.Row(equal_height=False):
-                    with gr.Column(scale=3, min_width=260):
+                # 2 x 2: camera (with the analysis drawn over it) | AV plane
+                #        settings                                | estimates
+                with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
+                    with gr.Column(scale=1, min_width=340, elem_classes="fea-stage"):
                         cam = gr.Image(
-                            sources=["webcam"], streaming=True, type="numpy", label="Camera",
-                            webcam_options=gr.WebcamOptions(mirror=True), elem_classes="fea-cam",
+                            sources=["webcam"], streaming=True, type="numpy",
+                            show_label=False, webcam_options=gr.WebcamOptions(mirror=True),
+                            elem_classes="fea-cam", height=520,
                         )  # fmt: skip
+                        # Drawn exactly over the raw preview, so the user sees one feed; the
+                        # camera's own start/stop button stays on top (see style.css).
+                        live_img = gr.Image(
+                            show_label=False, interactive=False, buttons=[], format="jpeg",
+                            elem_classes="fea-overlay", height=520,
+                        )  # fmt: skip
+                    with gr.Column(scale=1, min_width=340, elem_classes="fea-plane"):
+                        live_circ = gr.HTML(
+                            _wrap_svg(circumplex_svg(size=560)), elem_classes="fea-html-plain"
+                        )
+                with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
+                    with gr.Column(scale=1, min_width=340, elem_classes="fea-settings"):
+                        gr.HTML(
+                            '<div class="fea-section-title">Settings</div>',
+                            elem_classes="fea-html-plain",
+                        )
                         model = gr.Radio(
                             list(MODELS), value=DEFAULT_MODEL, label="Model",
-                            info="Switch while smiling to compare.",
+                            info="Switch while smiling to compare the two models.",
                         )  # fmt: skip
                         smoothing = gr.Slider(
                             0, 0.9, value=0.3, step=0.05, label="Temporal smoothing",
                             info="Higher is calmer but slower to react.",
                         )  # fmt: skip
                         show_lm = gr.Checkbox(True, label="Show landmarks")
-                    with gr.Column(scale=5, min_width=360):
-                        live_img = gr.Image(
-                            label="Analysis", interactive=False, elem_classes="fea-video",
-                            buttons=[],
-                        )  # fmt: skip
-                    with gr.Column(scale=4, min_width=320):
-                        live_circ = gr.HTML(
-                            _wrap_svg(circumplex_svg()), elem_classes="fea-html-plain"
-                        )
+                    with gr.Column(scale=1, min_width=340):
                         live_card = gr.HTML(
                             metrics_card(None, model_name=DEFAULT_MODEL),
                             elem_classes="fea-html-plain",

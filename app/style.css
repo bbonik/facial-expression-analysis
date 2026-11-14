@@ -66,7 +66,7 @@ footer { display: none !important; }
 
 /* ------------------------------------------------------------------ gradio blocks */
 .block, .form, .tabs, .tabitem { border-color: var(--fea-border) !important; }
-.block { background: var(--fea-card) !important; backdrop-filter: blur(10px); border-radius: 16px !important; }
+.block { background: var(--fea-card) !important; border-radius: 16px !important; }
 .tab-nav, [role="tablist"] { border-bottom: 1px solid var(--fea-border) !important; }
 button[role="tab"] { font-weight: 600 !important; font-size: 15px !important; }
 button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; border-color: var(--fea-accent) !important; }
@@ -135,3 +135,37 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
 .fea-table th { color: var(--fea-muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; }
 .fea-table td b { color: var(--fea-ok); }
 .fea-note { font-size: 12.5px; color: var(--fea-muted); text-align: center; padding: 18px 8px 26px; }
+
+/* ------------------------------------------------------------------ live 2x2 grid */
+.fea-grid-row { gap: 16px !important; align-items: stretch !important; }
+.fea-stage { position: relative; }
+.fea-stage .fea-cam, .fea-stage .fea-overlay { border-radius: 16px !important; overflow: hidden; }
+/* The analysed frame covers the raw preview ... */
+.fea-stage .fea-overlay {
+  position: absolute !important; top: 0; left: 0; right: 0; z-index: 5; pointer-events: none;
+  background: #000 !important; border: none !important;
+}
+.fea-stage .fea-overlay img { width: 100% !important; height: 100% !important; object-fit: contain; }
+/* ... but only once there is one (before that the camera prompt shows through). */
+.fea-stage .fea-overlay:not(:has(img)) { visibility: hidden; }
+/* The camera's controls stay above the overlay and clickable. */
+/* (the button's wrapper is transformed, i.e. its own stacking context: lift the wrapper) */
+.fea-stage .fea-cam .button-wrap, .fea-stage .fea-cam select { z-index: 10 !important; }
+.fea-stage .fea-cam .button-wrap { position: absolute; }
+.fea-stage .fea-cam button { color: #fff !important; }
+.fea-cam video { object-fit: contain; }
+.fea-plane .fea-circumplex-wrap { height: 100%; align-items: center; }
+.fea-plane .fea-circumplex { max-height: 540px; }
+.fea-section-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--fea-muted); padding: 2px 4px;
+}
+.fea-settings { gap: 10px !important; }
+.fea-stage .fea-cam button { white-space: nowrap; font-weight: 600; }
+.fea-stage .fea-cam .button-wrap {
+  background: linear-gradient(90deg, #7c3aed, #4f46e5) !important; border: none !important;
+  box-shadow: 0 6px 24px rgba(124, 58, 237, 0.45); border-radius: 999px !important;
+  padding: 0 6px;
+}
+.fea-stage .fea-cam .button-wrap:hover { filter: brightness(1.12); }
+.fea-stage .fea-cam .button-wrap .icon { display: none !important; }
