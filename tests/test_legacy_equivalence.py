@@ -1,23 +1,27 @@
 """The refactored pipeline must reproduce the original 2021 implementation.
 
-The legacy model used a buggy feature template (pairs of landmarks 0..50,
-normalised by the scale of landmarks 17..67). Replicating that quirk here, the
-new vectorised code reproduces the old outputs to float32 precision, which
-validates the refactor independently of the bug fix.
+The 2021 code was ported from a MATLAB system built on the 49-point IntraFace
+landmarks, whose arrays contain no jaw points. Its feature template kept
+IntraFace-style *positions* (0..50) while indexing the full 68-point dlib array,
+and normalised by the scale of dlib landmarks 17..67. Configured that way, the
+new code reproduces the old outputs to float32 precision, which validates the
+refactor independently of the fix.
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-from facial_expression_analysis import Frontalizer, PairwiseDistanceFeatures, describe_emotion
-from facial_expression_analysis.geometry import shape_scale
+from facial_expression_analysis import (
+    EmotionEstimator,
+    Frontalizer,
+    LinearEmotionModel,
+    PairwiseDistanceFeatures,
+    describe_emotion,
+)
 
-
-def legacy_features(frontal: np.ndarray) -> np.ndarray:
-    feats = PairwiseDistanceFeatures(landmark_indices=np.arange(51))(frontal)
-    ratio = shape_scale(frontal[:, :51]) / shape_scale(frontal[:, 17:])
-    return feats * ratio[:, None]
+LEGACY_PAIRS = np.arange(51)
+LEGACY_SCALE = np.arange(17, 68)
 
 
 def test_frontalization_matches_legacy(legacy_reference: dict[str, np.ndarray]) -> None:
@@ -25,14 +29,22 @@ def test_frontalization_matches_legacy(legacy_reference: dict[str, np.ndarray]) 
     np.testing.assert_allclose(frontal, legacy_reference["frontal"], atol=1e-12)
 
 
-def test_predictions_and_labels_match_legacy(
+def test_legacy_model_reproduced_exactly(
     legacy_reference: dict[str, np.ndarray], legacy_weights: dict[str, np.ndarray]
 ) -> None:
-    frontal = Frontalizer()(legacy_reference["landmarks"])
-    raw = legacy_features(frontal) @ legacy_weights["coef"] + legacy_weights["intercept"]
-    np.testing.assert_allclose(raw, legacy_reference["raw_predictions"], atol=1e-5)
+    feats = PairwiseDistanceFeatures(landmark_indices=LEGACY_PAIRS, scale=LEGACY_SCALE)
+    model = LinearEmotionModel(
+        legacy_weights["coef"], legacy_weights["intercept"], LEGACY_PAIRS, LEGACY_SCALE
+    )
+    assert model.features.n_features == feats.n_features == 1275
 
-    arousal = np.clip(raw[:, 0], -1, 1).round(3)
-    valence = np.clip(raw[:, 1], -1, 1).round(3)
-    labels = [str(describe_emotion(a, v)) for a, v in zip(arousal, valence, strict=True)]
+    frontal = Frontalizer()(legacy_reference["landmarks"])
+    np.testing.assert_allclose(
+        model.predict(frontal), legacy_reference["raw_predictions"], atol=1e-5
+    )
+
+    # Labels: the legacy code rounded arousal/valence to 3 decimals before
+    # labelling, which matters for faces right at an intensity boundary.
+    avi = EmotionEstimator(model).predict(legacy_reference["landmarks"]).round(3)
+    labels = [str(describe_emotion(a, v)) for a, v, _ in avi]
     assert labels == [str(s).strip() for s in legacy_reference["labels"]]

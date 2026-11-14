@@ -13,10 +13,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from . import __version__
-from .data import MorphSet, split_subjects
-from .features import LandmarkSubset, PairwiseDistanceFeatures
+from .data import MorphSet, split_by_group
+from .features import LandmarkSubset, PairwiseDistanceFeatures, ScaleReference
 from .frontalization import Frontalizer
-from .metrics import regression_report
+from .metrics import ccc, regression_report
 from .model import LinearEmotionModel
 from .pipeline import EmotionEstimator
 
@@ -29,9 +29,16 @@ class TrainConfig:
 
     n_components: int = 31
     subset: LandmarkSubset = LandmarkSubset.NO_JAW
+    scale: ScaleReference = ScaleReference.STABLE
     val_size: float = 0.2
     test_size: float = 0.1
     seed: int = 1
+
+    def features(self) -> PairwiseDistanceFeatures:
+        return PairwiseDistanceFeatures(self.subset, scale=self.scale)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**asdict(self), "subset": self.subset.value, "scale": self.scale.value}
 
 
 @dataclass
@@ -44,12 +51,13 @@ class TrainResult:
 
 def compute_features(
     landmarks: NDArray[np.float64],
-    subset: LandmarkSubset | str = LandmarkSubset.NO_JAW,
+    features: PairwiseDistanceFeatures | None = None,
     frontalizer: Frontalizer | None = None,
 ) -> NDArray[np.float32]:
     """Frontalize a batch of raw landmarks and compute pairwise-distance features."""
     frontalizer = frontalizer or Frontalizer()
-    return PairwiseDistanceFeatures(subset).transform(frontalizer(landmarks))
+    features = features or PairwiseDistanceFeatures()
+    return features.transform(frontalizer(landmarks))
 
 
 def evaluate_model(
@@ -64,38 +72,33 @@ def evaluate_model(
       intensity derived from them.
     """
     if features is None:
-        features = compute_features(data.landmarks, landmark_subset(model))
+        features = compute_features(data.landmarks, model.features)
     raw = model.predict_features(features)
     final = EmotionEstimator(model)._postprocess(raw)
     return {
         "n_samples": len(data),
-        "n_subjects": int(np.unique(data.subjects).size),
+        "n_persons": int(np.unique(data.persons).size),
         "regressor": regression_report(data.targets, raw, model.targets),
         "pipeline": regression_report(data.targets, final, model.targets),
     }
 
 
-def landmark_subset(model: LinearEmotionModel) -> LandmarkSubset:
-    if model.subset is None:
-        raise ValueError("Model uses a custom landmark set")
-    return model.subset
-
-
 def train_pls(data: MorphSet, config: TrainConfig | None = None) -> TrainResult:
-    """Train a PLS regressor with a subject-wise train/validation/test split."""
+    """Train a PLS regressor with a person-wise train/validation/test split."""
     from sklearn import __version__ as sklearn_version
     from sklearn.cross_decomposition import PLSRegression
 
     config = config or TrainConfig()
+    feat = config.features()
     timings: dict[str, float] = {}
 
     t0 = time.perf_counter()
-    features = compute_features(data.landmarks, config.subset)
+    features = compute_features(data.landmarks, feat)
     timings["features_s"] = time.perf_counter() - t0
     logger.info("Computed %s features in %.1fs", features.shape, timings["features_s"])
 
-    train, val, test = split_subjects(
-        data.subjects, val_size=config.val_size, test_size=config.test_size, seed=config.seed
+    train, val, test = split_by_group(
+        data.persons, val_size=config.val_size, test_size=config.test_size, seed=config.seed
     )
 
     t0 = time.perf_counter()
@@ -104,11 +107,12 @@ def train_pls(data: MorphSet, config: TrainConfig | None = None) -> TrainResult:
     timings["fit_s"] = time.perf_counter() - t0
     logger.info("Fitted PLS(%d) in %.1fs", config.n_components, timings["fit_s"])
 
-    feat = PairwiseDistanceFeatures(config.subset)
     metadata = {
         "estimator": f"PLSRegression(n_components={config.n_components})",
         "landmark_subset": config.subset.value,
-        "config": {**asdict(config), "subset": config.subset.value},
+        "scale_reference": config.scale.value,
+        "config": config.to_dict(),
+        "split": "by person (see facial_expression_analysis.data)",
         "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "package_version": __version__,
         "sklearn_version": sklearn_version,
@@ -123,3 +127,27 @@ def train_pls(data: MorphSet, config: TrainConfig | None = None) -> TrainResult:
     }
     model.metadata["metrics"] = metrics
     return TrainResult(model=model, metrics=metrics, config=config, timings=timings)
+
+
+def cross_validate_pls(
+    features: NDArray[np.float32],
+    targets: NDArray[np.float64],
+    groups: NDArray[np.integer],
+    n_components: int = 31,
+    n_splits: int = 5,
+) -> NDArray[np.float64]:
+    """Run grouped k-fold CV of PLS; return per-fold CCC of shape ``(n_splits, n_targets)``.
+
+    Folds are formed with :class:`sklearn.model_selection.GroupKFold`, so a
+    group (person) never appears in both the training and the test fold.
+    """
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.model_selection import GroupKFold
+
+    scores = []
+    for train, test in GroupKFold(n_splits=n_splits).split(features, targets, groups):
+        pred = (
+            PLSRegression(n_components).fit(features[train], targets[train]).predict(features[test])
+        )
+        scores.append([ccc(targets[test, k], pred[:, k]) for k in range(targets.shape[1])])
+    return np.asarray(scores)

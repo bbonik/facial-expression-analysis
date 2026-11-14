@@ -5,12 +5,13 @@ from itertools import combinations
 import numpy as np
 import pytest
 
+from facial_expression_analysis.constants import STABLE_POINTS
 from facial_expression_analysis.features import LandmarkSubset, PairwiseDistanceFeatures
 
 from .conftest import random_similarity
 
 
-@pytest.mark.parametrize(("subset", "n"), [("all", 2278), ("no_jaw", 1275)])
+@pytest.mark.parametrize(("subset", "n"), [("all", 2278), ("no_jaw", 1275), ("intraface49", 1176)])
 def test_feature_dimensionality(subset: str, n: int) -> None:
     assert PairwiseDistanceFeatures(subset).n_features == n
 
@@ -22,13 +23,44 @@ def test_no_jaw_excludes_jaw_and_keeps_mouth() -> None:
     np.testing.assert_array_equal(used, np.arange(17, 68))
 
 
-def test_matches_naive_implementation(landmarks: np.ndarray) -> None:
+def test_intraface49_drops_jaw_and_inner_mouth_corners() -> None:
+    used = set(np.unique(PairwiseDistanceFeatures("intraface49").pairs))
+    assert used == set(range(17, 68)) - {60, 64}
+
+
+@pytest.mark.parametrize(
+    ("scale", "ref_idx"),
+    [("subset", LandmarkSubset.NO_JAW.indices), ("stable", np.array(STABLE_POINTS))],
+)
+def test_matches_naive_implementation(
+    landmarks: np.ndarray, scale: str, ref_idx: np.ndarray
+) -> None:
     shape = landmarks[3]
     idx = LandmarkSubset.NO_JAW.indices
-    sub = shape[idx]
-    scale = np.sqrt(np.mean(np.sum((sub - sub.mean(0)) ** 2, axis=1)))
-    naive = [np.linalg.norm(shape[a] - shape[b]) / scale for a, b in combinations(idx, 2)]
-    np.testing.assert_allclose(PairwiseDistanceFeatures("no_jaw")(shape), naive, rtol=1e-6)
+    ref = shape[ref_idx]
+    s = np.sqrt(np.mean(np.sum((ref - ref.mean(0)) ** 2, axis=1)))
+    naive = [np.linalg.norm(shape[a] - shape[b]) / s for a, b in combinations(idx, 2)]
+    feats = PairwiseDistanceFeatures("no_jaw", scale=scale)
+    np.testing.assert_allclose(feats(shape), naive, rtol=1e-6)
+    assert feats.scale_reference == scale
+
+
+def test_stable_scale_ignores_mouth_opening(landmarks: np.ndarray) -> None:
+    """Opening the mouth must not change distances among the eyes and brows."""
+    shape = landmarks[0].copy()
+    opened = shape.copy()
+    opened[[56, 57, 58, 65, 66, 67], 1] += 15.0  # drop the lower lip
+    eye_brow = [k for k, (a, b) in enumerate(PairwiseDistanceFeatures().pairs) if a < 48 and b < 48]
+    stable = PairwiseDistanceFeatures(scale="stable")
+    subset = PairwiseDistanceFeatures(scale="subset")
+    np.testing.assert_allclose(stable(opened)[eye_brow], stable(shape)[eye_brow], rtol=1e-6)
+    assert not np.allclose(subset(opened)[eye_brow], subset(shape)[eye_brow], rtol=1e-3)
+
+
+def test_custom_scale_indices() -> None:
+    feats = PairwiseDistanceFeatures(scale=[36, 39, 42, 45])
+    assert feats.scale_reference is None
+    np.testing.assert_array_equal(feats.scale_indices, [36, 39, 42, 45])
 
 
 def test_similarity_invariance(landmarks: np.ndarray, rng: np.random.Generator) -> None:

@@ -11,7 +11,7 @@ from typing import Annotated
 import numpy as np
 import typer
 
-from .features import LandmarkSubset
+from .features import LandmarkSubset, ScaleReference
 
 app = typer.Typer(
     help="Dimensional facial expression analysis (arousal, valence, intensity).",
@@ -87,15 +87,20 @@ def train(
     output: Annotated[Path, typer.Option("--output", "-o")] = Path("models/emotion_model.npz"),
     components: Annotated[int, typer.Option(min=1)] = 31,
     subset: Annotated[LandmarkSubset, typer.Option()] = LandmarkSubset.NO_JAW,
+    scale: Annotated[
+        ScaleReference, typer.Option(help="Landmarks used to estimate the face scale.")
+    ] = ScaleReference.STABLE,
     seed: Annotated[int, typer.Option()] = 1,
     data: Annotated[Path | None, typer.Option(help="Path to Morphset.csv.zip.")] = None,
 ) -> None:
-    """Train a PLS emotion model on MorphSet with a subject-wise split."""
+    """Train a PLS emotion model on MorphSet with a person-wise split."""
     from .data import load_morphset
     from .training import TrainConfig, train_pls
 
     dataset = load_morphset(data)
-    result = train_pls(dataset, TrainConfig(n_components=components, subset=subset, seed=seed))
+    result = train_pls(
+        dataset, TrainConfig(n_components=components, subset=subset, scale=scale, seed=seed)
+    )
     result.model.save(output)
     output.with_suffix(".metrics.json").write_text(json.dumps(result.metrics, indent=2))
     _print_metrics(result.metrics)
@@ -106,16 +111,16 @@ def train(
 @app.command()
 def evaluate(
     model: ModelOpt = None,
-    seed: Annotated[int, typer.Option(help="Seed of the subject split.")] = 1,
+    seed: Annotated[int, typer.Option(help="Seed of the person split.")] = 1,
     data: Annotated[Path | None, typer.Option(help="Path to Morphset.csv.zip.")] = None,
 ) -> None:
-    """Evaluate a model on the held-out test subjects of MorphSet."""
-    from .data import load_morphset, split_subjects
+    """Evaluate a model on the held-out test persons of MorphSet."""
+    from .data import load_morphset, split_by_group
     from .model import LinearEmotionModel
     from .training import evaluate_model
 
     dataset = load_morphset(data)
-    _, val, test = split_subjects(dataset.subjects, seed=seed)
+    _, val, test = split_by_group(dataset.persons, seed=seed)
     m = LinearEmotionModel.load(model)
     _print_metrics(
         {
@@ -189,7 +194,7 @@ def webcam(
 
 def _print_metrics(metrics: dict[str, dict]) -> None:  # type: ignore[type-arg]
     for split, res in metrics.items():
-        typer.secho(f"\n{split}: {res['n_samples']} faces, {res['n_subjects']} subjects", bold=True)
+        typer.secho(f"\n{split}: {res['n_samples']} faces, {res['n_persons']} persons", bold=True)
         for view in ("regressor", "pipeline"):
             typer.echo(f"  {view}:")
             for target, m in res[view].items():

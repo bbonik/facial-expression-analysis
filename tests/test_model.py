@@ -53,6 +53,7 @@ def test_save_load_roundtrip(tmp_path: Path, rng: np.random.Generator) -> None:
         rng.normal(size=(feat.n_features, 3)),
         rng.normal(size=3),
         feat.landmark_indices,
+        feat.scale_indices,
         metadata={"note": "test", "metrics": {"ccc": 0.5}},
     )
     loaded = LinearEmotionModel.load(model.save(tmp_path / "m.npz"))
@@ -62,11 +63,28 @@ def test_save_load_roundtrip(tmp_path: Path, rng: np.random.Generator) -> None:
     assert loaded.metadata == model.metadata
     assert loaded.subset is not None
     assert loaded.subset.value == "no_jaw"
+    np.testing.assert_array_equal(loaded.scale_indices, feat.scale_indices)
+
+
+def test_loads_format_v1_without_scale_indices(tmp_path: Path, rng: np.random.Generator) -> None:
+    idx = np.arange(17, 68)
+    path = tmp_path / "v1.npz"
+    np.savez(
+        path,
+        coef=rng.normal(size=(1275, 3)),
+        intercept=np.zeros(3),
+        landmark_indices=idx,
+        targets=np.array(["arousal", "valence", "intensity"]),
+        metadata=np.array("{}"),
+        format_version=np.array(1),
+    )
+    model = LinearEmotionModel.load(path)
+    np.testing.assert_array_equal(model.scale_indices, idx)  # v1 used the subset scale
 
 
 def test_shape_validation() -> None:
     with pytest.raises(ValueError, match="coef has shape"):
-        LinearEmotionModel(np.zeros((10, 3)), np.zeros(3), np.arange(17, 68))
+        LinearEmotionModel(np.zeros((10, 3)), np.zeros(3), np.arange(17, 68), np.arange(17, 68))
 
 
 def test_bundled_model_loads_and_is_small() -> None:

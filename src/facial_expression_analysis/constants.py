@@ -29,3 +29,13 @@ FACE_CONTOURS: Final[tuple[tuple[range, bool], ...]] = (
     (OUTER_MOUTH, True),
     (INNER_MOUTH, True),
 )
+
+# The 49-point IntraFace scheme (used by the original MATLAB system) expressed
+# in dlib ids: every non-jaw landmark except the inner-mouth corners 60 and 64,
+# which nearly coincide with the outer-mouth corners 48 and 54.
+INTRAFACE_49: Final = tuple(i for i in range(JAW.stop, N_LANDMARKS) if i not in (60, 64))
+
+# Landmarks that barely move with facial expressions: the nose and the eye
+# corners. Used as the reference for scale normalisation, so that an open mouth
+# or raised eyebrows do not inflate the scale estimate.
+STABLE_POINTS: Final = (27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 39, 42, 45)

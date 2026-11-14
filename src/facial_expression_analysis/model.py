@@ -22,7 +22,7 @@ from .features import LandmarkSubset, PairwiseDistanceFeatures
 
 TARGETS = ("arousal", "valence", "intensity")
 DEFAULT_MODEL = "emotion_model.npz"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2  # v2 added scale_indices
 
 
 class _Predictor(Protocol):
@@ -41,6 +41,8 @@ class LinearEmotionModel:
         ``(n_targets,)`` biases.
     landmark_indices
         Landmarks used to build the pairwise-distance features.
+    scale_indices
+        Landmarks used for the scale normalisation of the features.
     targets
         Names of the output columns.
     metadata
@@ -50,6 +52,7 @@ class LinearEmotionModel:
     coef: NDArray[np.float64]
     intercept: NDArray[np.float64]
     landmark_indices: NDArray[np.intp]
+    scale_indices: NDArray[np.intp]
     targets: tuple[str, ...] = TARGETS
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -57,7 +60,8 @@ class LinearEmotionModel:
         self.coef = np.asarray(self.coef, dtype=np.float64)
         self.intercept = np.asarray(self.intercept, dtype=np.float64).reshape(-1)
         self.landmark_indices = np.asarray(self.landmark_indices, dtype=np.intp)
-        n_feat = PairwiseDistanceFeatures(landmark_indices=self.landmark_indices).n_features
+        self.scale_indices = np.asarray(self.scale_indices, dtype=np.intp)
+        n_feat = self.features.n_features
         if self.coef.shape != (n_feat, len(self.targets)):
             raise ValueError(
                 f"coef has shape {self.coef.shape}, expected {(n_feat, len(self.targets))}"
@@ -86,7 +90,14 @@ class LinearEmotionModel:
         n = features.n_features
         intercept = np.asarray(estimator.predict(np.zeros((1, n))), dtype=np.float64)[0]
         coef = np.asarray(estimator.predict(np.eye(n)), dtype=np.float64) - intercept
-        model = cls(coef, intercept, features.landmark_indices, targets, dict(metadata or {}))
+        model = cls(
+            coef,
+            intercept,
+            features.landmark_indices,
+            features.scale_indices,
+            targets,
+            dict(metadata or {}),
+        )
         if check:
             rng = np.random.default_rng(0)
             probe = rng.normal(1.0, 0.5, size=(16, n))
@@ -98,7 +109,9 @@ class LinearEmotionModel:
     # -------------------------------------------------------------- inference
     @property
     def features(self) -> PairwiseDistanceFeatures:
-        return PairwiseDistanceFeatures(landmark_indices=self.landmark_indices)
+        return PairwiseDistanceFeatures(
+            landmark_indices=self.landmark_indices, scale=self.scale_indices
+        )
 
     @property
     def subset(self) -> LandmarkSubset | None:
@@ -128,6 +141,7 @@ class LinearEmotionModel:
             coef=self.coef,
             intercept=self.intercept,
             landmark_indices=self.landmark_indices,
+            scale_indices=self.scale_indices,
             targets=np.array(self.targets),
             metadata=np.array(json.dumps(self.metadata)),
             format_version=np.array(FORMAT_VERSION),
@@ -149,6 +163,8 @@ class LinearEmotionModel:
                 coef=data["coef"],
                 intercept=data["intercept"],
                 landmark_indices=data["landmark_indices"],
+                # format v1 normalised by the feature landmarks themselves
+                scale_indices=data["scale_indices"] if version >= 2 else data["landmark_indices"],
                 targets=tuple(str(t) for t in data["targets"]),
                 metadata=json.loads(str(data["metadata"])),
             )

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
-from facial_expression_analysis.data import split_subjects
+from facial_expression_analysis.data import assign_person_ids, split_by_group
 from facial_expression_analysis.metrics import ccc, regression_report
 
 
@@ -30,7 +31,7 @@ def test_regression_report_keys(rng: np.random.Generator) -> None:
 
 def test_subject_split_is_disjoint_and_complete() -> None:
     subjects = np.repeat(np.arange(1, 101), 7)
-    train, val, test = split_subjects(subjects, val_size=0.2, test_size=0.1, seed=0)
+    train, val, test = split_by_group(subjects, val_size=0.2, test_size=0.1, seed=0)
     assert np.all(train.astype(int) + val + test == 1)
     sets = [set(subjects[m]) for m in (train, val, test)]
     assert not sets[0] & sets[1]
@@ -43,12 +44,29 @@ def test_subject_split_is_disjoint_and_complete() -> None:
 
 def test_subject_split_is_reproducible() -> None:
     subjects = np.repeat(np.arange(50), 3)
-    a = split_subjects(subjects, seed=3)
-    b = split_subjects(subjects, seed=3)
+    a = split_by_group(subjects, seed=3)
+    b = split_by_group(subjects, seed=3)
     for x, y in zip(a, b, strict=True):
         np.testing.assert_array_equal(x, y)
 
 
 def test_subject_split_validates_sizes() -> None:
     with pytest.raises(ValueError, match="sum"):
-        split_subjects(np.arange(10), val_size=0.6, test_size=0.5)
+        split_by_group(np.arange(10), val_size=0.6, test_size=0.5)
+
+
+def test_assign_person_ids_groups_photo_series() -> None:
+    meta = pd.DataFrame(
+        {
+            "dataset": ["R", "R", "R", "R", "K", "K", "K", "W", "W", "F", "F", "F"],
+            "subject": [1, 2, 3, 4, 202, 203, 204, 342, 343, 371, 372, 373],
+        }
+    )
+    person = assign_person_ids(meta)
+    # R: triplets; K, F: pairs; W: one id per person. Ids are unique across datasets.
+    assert person.tolist() == [0, 0, 0, 1, 2, 2, 3, 4, 5, 6, 6, 7]
+
+
+def test_assign_person_ids_rejects_unknown_dataset() -> None:
+    with pytest.raises(ValueError, match="Unknown dataset"):
+        assign_person_ids(pd.DataFrame({"dataset": ["X"], "subject": [1]}))
