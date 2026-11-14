@@ -60,8 +60,9 @@ scripts/web_demo.sh        # installs dependencies, fetches the dlib model, open
 ```
 
 Three tabs:
-- **Live:** webcam stream with a circumplex trail, A/V/I bars, a model switch, smoothing
-  and a landmark-fit reliability badge.
+- **Live:** webcam stream with a circumplex trail, A/V/I bars, a model switch, smoothing,
+  a landmark-fit reliability badge, several faces at once, and per-person neutral
+  calibration (optionally zeroed at your own neutral).
 - **Photo:** every face in an uploaded image, or in one of the examples.
 - **How it works:** the pipeline, why the model is linear, limitations.
 

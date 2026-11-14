@@ -29,14 +29,14 @@ from core import (
     update_tracks,
 )
 from render import (
-    CALIBRATED_CHIP,
+    chip,
     circumplex_svg,
     draw_countdown,
     draw_overlay,
+    estimates_card,
     faces_grid,
     fit_badge,
     metrics_card,
-    status_banner,
 )
 
 REPO = "https://github.com/bbonik/facial-expression-analysis"
@@ -79,60 +79,51 @@ def _wrap_svg(svg: str) -> str:
     return f'<div class="fea-circumplex-wrap">{svg}</div>'
 
 
-def live_step(frame, model, smoothing, show_landmarks, calibrate_clicks, reset_clicks, state):
+def live_step(frame, model, smoothing, show_landmarks, zero, calibrate_clicks, reset_clicks, state):
     state = state or LiveState()
     handle_buttons(state, int(calibrate_clicks or 0), int(reset_clicks or 0))
-    if frame is None:
-        return (
-            None,
-            _wrap_svg(circumplex_svg(size=640)),
-            metrics_card(None, model_name=model),
-            state,
+    seen = []
+    overlay = None
+    if frame is not None:
+        frame = np.ascontiguousarray(frame[..., :3], dtype=np.uint8)
+        faces = ENGINE.analyze(frame, model)
+        state, seen = update_tracks(state, faces, model, smoothing, zero=bool(zero))
+        calibration_step(state, seen, ENGINE.neutral[model], ENGINE.p99)
+        overlay = draw_overlay(
+            frame,
+            [f.box for _, f, _ in seen],
+            [f.landmarks for _, f, _ in seen],
+            [p for _, _, p in seen],
+            show_landmarks=show_landmarks,
         )
-    frame = np.ascontiguousarray(frame[..., :3], dtype=np.uint8)
-    faces = ENGINE.analyze(frame, model)
-    state, seen = update_tracks(state, faces, model, smoothing)
-    calibration_step(state, seen, ENGINE.neutral[model], ENGINE.p99)
-    points = [p for _, _, p in seen]
-    overlay = draw_overlay(
-        frame,
-        [f.box for _, f, _ in seen],
-        [f.landmarks for _, f, _ in seen],
-        points,
-        show_landmarks=show_landmarks,
-    )
-    count = countdown_number(state)
-    if count is not None:
-        overlay = draw_countdown(
-            overlay, count, "Hold a relaxed, neutral face" if count else "Calibrating... keep still"
-        )
-    footer = f"{state.fps:.0f} fps · smoothing {smoothing:.2f}" if state.fps else ""
-    if len(seen) <= 1:  # one face: the full card
-        track, face = (seen[0][0], seen[0][1]) if seen else (None, None)
-        card = metrics_card(
-            points[0] if points else None,
-            model_name=model,
-            fit=ENGINE.fit(face.distance if face else None),
-            footer=footer,
-            calibrated=track is not None and is_calibrated(state, track.id),
-        )
-    else:  # several faces: one compact card each, in the face's colour
-        rows = [
-            (
-                p,
-                (CALIBRATED_CHIP if is_calibrated(state, t.id) else "")
-                + fit_badge(*ENGINE.fit(f.distance)),
+        count = countdown_number(state)
+        if count is not None:
+            overlay = draw_countdown(
+                overlay, count, "Hold a relaxed, neutral face" if count else "Keep still"
             )
-            for t, f, p in seen
-        ]
-        card = (
-            f'<div class="fea-card"><div class="fea-kicker">{model} · {len(seen)} faces</div>'
-            f'<div style="margin-top:10px">{faces_grid(rows)}</div>'
-            f'<div class="fea-footer">{footer}</div></div>'
-        )
+
+    # Status lives in tags only (header row, fixed height): nothing appears or moves.
+    head = []
     status = calibration_status(state)
-    if status is not None:
-        card = status_banner(*status) + card
+    if status is not None and status[1] != "ok":
+        head.append(chip(*status))
+    zeroed_any = False
+    faces_out = []
+    for t, f, p in seen:
+        tags = []
+        if is_calibrated(state, t.id):
+            tags.append(chip("calibrated", "ok"))
+            if state.zero:
+                tags.append(chip("zeroed", "info"))
+                zeroed_any = True
+        faces_out.append((p, f.distance, tags))
+    if zero and seen and not zeroed_any and state.calibration is None:
+        head.append(chip("zero mode: calibrate first", "warn"))
+    footer = f"{state.fps:.0f} fps · smoothing {smoothing:.2f}" if state.fps else ""
+    card = estimates_card(
+        faces_out, model_name=model, chips=head, p50=ENGINE.p50, p99=ENGINE.p99, footer=footer
+    )
+    points = [p for _, _, p in seen]
     trails = [(t.trail, t.color if len(seen) > 1 else "") for t, _, _ in seen]
     return overlay, _wrap_svg(circumplex_svg(points, trails, size=640)), card, state
 
@@ -281,52 +272,48 @@ def build() -> gr.Blocks:
         with gr.Tabs():
             with gr.Tab("Live", id="live"):
                 state = gr.State(LiveState())
-                # 2 x 2: camera (with the analysis drawn over it) | AV plane
-                #        settings                                | estimates
+                # Two columns that stack independently (no gaps):
+                #   camera + settings (40%)  |  AV plane + estimates (60%)
                 with gr.Row(equal_height=False, elem_classes="fea-grid-row"):
-                    with gr.Column(scale=2, min_width=300, elem_classes="fea-stage"):
-                        cam = gr.Image(
-                            sources=["webcam"], streaming=True, type="numpy",
-                            show_label=False, webcam_options=gr.WebcamOptions(mirror=True),
-                            elem_classes="fea-cam", height=420,
-                        )  # fmt: skip
-                        # Drawn exactly over the raw preview, so the user sees one feed; the
-                        # camera's own start/stop button stays on top (see style.css).
-                        live_img = gr.Image(
-                            show_label=False, interactive=False, buttons=[], format="jpeg",
-                            elem_classes="fea-overlay",
-                        )  # fmt: skip
-                    with gr.Column(scale=3, min_width=380, elem_classes="fea-plane"):
-                        live_circ = gr.HTML(
-                            _wrap_svg(circumplex_svg(size=640)), elem_classes="fea-html-plain"
-                        )
-                with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
-                    with gr.Column(scale=2, min_width=300, elem_classes="fea-settings"):
-                        gr.HTML(
-                            '<div class="fea-section-title">Settings</div>',
-                            elem_classes="fea-html-plain",
-                        )
-                        model = gr.Radio(
-                            list(MODELS), value=DEFAULT_MODEL, label="Model",
-                            info="Switch while smiling to compare the two models.",
-                        )  # fmt: skip
-                        smoothing = gr.Slider(
-                            0, 0.9, value=0.3, step=0.05, label="Temporal smoothing",
-                            info="Higher is calmer but slower to react.",
-                        )  # fmt: skip
-                        show_lm = gr.Checkbox(True, label="Show landmarks")
-                        with gr.Row(elem_classes="fea-calib-row"):
-                            calibrate_btn = gr.Button(
-                                "Calibrate neutral", size="sm", elem_classes="fea-calibrate"
+                    with gr.Column(scale=2, min_width=300, elem_classes="fea-col"):
+                        with gr.Column(elem_classes="fea-stage"):
+                            cam = gr.Image(
+                                sources=["webcam"], streaming=True, type="numpy",
+                                show_label=False, webcam_options=gr.WebcamOptions(mirror=True),
+                                elem_classes="fea-cam", height=420,
+                            )  # fmt: skip
+                            # Drawn exactly over the raw preview, so the user sees one feed;
+                            # the camera's own start/stop button stays on top (see style.css).
+                            live_img = gr.Image(
+                                show_label=False, interactive=False, buttons=[], format="jpeg",
+                                elem_classes="fea-overlay",
+                            )  # fmt: skip
+                        with gr.Group(elem_classes="fea-settings-block"):
+                            gr.HTML(
+                                '<div class="fea-section-title">Settings</div>',
+                                elem_classes="fea-html-plain",
                             )
-                            reset_btn = gr.Button("Reset", size="sm", elem_classes="fea-reset")
-                        gr.HTML(
-                            '<div class="fea-hint">Look at the camera with a relaxed, neutral '
-                            "face and press <b>Calibrate neutral</b>: your personal resting-face "
-                            "offset is removed (per face and per model, for this session).</div>",
-                            elem_classes="fea-html-plain",
-                        )
-                        # Clicks are passed to the stream as counters, so a click can never be
+                            model = gr.Radio(
+                                list(MODELS), value=DEFAULT_MODEL, label="Model",
+                                info="Switch while smiling to compare the two models.",
+                            )  # fmt: skip
+                            smoothing = gr.Slider(
+                                0, 0.9, value=0.3, step=0.05, label="Temporal smoothing",
+                                info="Higher is calmer but slower to react.",
+                            )  # fmt: skip
+                            show_lm = gr.Checkbox(True, label="Show landmarks")
+                            with gr.Row(elem_classes="fea-calib-row"):
+                                calibrate_btn = gr.Button(
+                                    "Calibrate neutral", size="sm", elem_classes="fea-calibrate"
+                                )
+                                reset_btn = gr.Button("Reset", size="sm", elem_classes="fea-reset")
+                            zero = gr.Checkbox(
+                                False, label="Zero at my neutral",
+                                info="After calibrating, your neutral face reads exactly "
+                                "neutral and expressions are shown relative to it "
+                                "(slightly less accurate).",
+                            )  # fmt: skip
+                        # Clicks reach the stream as counters, so a click can never be
                         # overwritten by a frame that is still being processed.
                         calibrate_clicks = gr.Number(0, visible=False)
                         reset_clicks = gr.Number(0, visible=False)
@@ -344,14 +331,19 @@ def build() -> gr.Blocks:
                             quit_btn.click(quit_app, None, None, queue=False).then(
                                 None, None, None, js=GOODBYE_JS
                             )
-                    with gr.Column(scale=3, min_width=380):
+                    with gr.Column(scale=3, min_width=380, elem_classes="fea-col"):
+                        with gr.Column(elem_classes="fea-plane"):
+                            live_circ = gr.HTML(
+                                _wrap_svg(circumplex_svg(size=640)),
+                                elem_classes="fea-html-plain",
+                            )
                         live_card = gr.HTML(
-                            metrics_card(None, model_name=DEFAULT_MODEL),
+                            estimates_card([], model_name=DEFAULT_MODEL),
                             elem_classes="fea-html-plain",
                         )
                 cam.stream(
                     live_step,
-                    [cam, model, smoothing, show_lm, calibrate_clicks, reset_clicks, state],
+                    [cam, model, smoothing, show_lm, zero, calibrate_clicks, reset_clicks, state],
                     [live_img, live_circ, live_card, state],
                     stream_every=0.08,
                     time_limit=600,

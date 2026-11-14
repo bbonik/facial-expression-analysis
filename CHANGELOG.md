@@ -85,7 +85,10 @@
 - Web demo: several faces are tracked at once, each with its own number, colour, trail and
   card. **Calibrate neutral** removes a person's resting-face offset: identity-only, per face
   and per model, with a countdown and checks for non-neutral faces and poor fits (see the
-  model card). Models now store `neutral_mean`.
+  model card). The optional **Zero at my neutral** mode maps a calibrated face's own neutral
+  to exactly (0, 0, 0), at a measured accuracy cost. Models now store `neutral_mean`.
+- Web demo layout is fixed: two independent columns (camera and settings | AV plane and
+  estimates); status appears only as tags, so no panel appears, disappears or moves.
 - **Gradio web demo** (`app/`). It has live webcam and photo tabs, a custom SVG circumplex
   with the 24 emotion words and a trail, metric cards, a landmark-fit reliability badge and
   a live model switch. `scripts/deploy_space.sh` deploys it as a self-contained Hugging Face

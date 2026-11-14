@@ -373,3 +373,76 @@ def draw_overlay(
         cv2.putText(out, text, (bx0 + pad + 2, by1 - pad), cv2.FONT_HERSHEY_DUPLEX, fs,
                     (240, 244, 255), 1, cv2.LINE_AA)  # fmt: skip
     return out
+
+
+# --------------------------------------------------------------------------- live estimates
+def chip(text: str, kind: str = "ok") -> str:
+    """Small tag (ok: green, info: violet, warn: amber) for the estimates header."""
+    return f'<span class="fea-chip fea-chip-{kind}">{html.escape(text)}</span>'
+
+
+def _fit_line(distance: float | None, p99: float | None) -> str:
+    if distance is None or p99 is None:
+        return ""
+    ok = distance <= p99
+    text = "reliable fit" if ok else "poor fit: caution"
+    cls = "ok" if ok else "warn"
+    return f'<div class="fea-fit-line fea-fit-{cls}"><span class="fea-dot"></span>{text}</div>'
+
+
+def estimates_card(
+    faces: Sequence[tuple[Point, float | None, list[str]]],
+    *,
+    model_name: str,
+    chips: Sequence[str] = (),
+    p50: float | None = None,
+    p99: float | None = None,
+    footer: str = "",
+) -> str:
+    """Fixed-height estimates panel for the live tab: same box for 0, 1 or several faces.
+
+    ``faces`` holds (smoothed point, fit distance, per-face chips). Status is shown only
+    as chips in the header row, so nothing appears, disappears or moves.
+    """
+    header = (
+        f'<div class="fea-kicker fea-est-head"><span>{html.escape(model_name)}</span>'
+        f"{''.join(chips)}</div>"
+    )
+    if not faces:
+        body = (
+            '<div class="fea-est-empty"><div class="fea-empty-icon">◎</div>'
+            "<div>No face detected yet</div>"
+            '<div class="fea-muted">Start the camera and face it in good, even light.</div></div>'
+        )
+    elif len(faces) == 1:
+        p, dist, face_chips = faces[0]
+        color = valence_hex(p.valence)
+        bars = (
+            _bar("Arousal", p.arousal, True, color)
+            + _bar("Valence", p.valence, True, color)
+            + _bar("Intensity", p.intensity, False, color)
+        )
+        body = (
+            f'<div class="fea-label" style="color:{color}">{html.escape(p.label)}'
+            f"{''.join(face_chips)}</div>"
+            f'<div class="fea-metrics">{bars}</div>{fit_badge(dist, p50, p99)}'
+        )
+    else:
+        cells = []
+        for p, dist, face_chips in faces:
+            color = valence_hex(p.valence)
+            cells.append(
+                '<div class="fea-mini">'
+                f'<div class="fea-face-tag" style="background:{p.accent or color}">'
+                f"{html.escape(p.tag)}</div>"
+                f'<div class="fea-mini-label" style="color:{color}">{html.escape(p.label)}</div>'
+                f'<div class="fea-face-nums">A {p.arousal:+.2f} · V {p.valence:+.2f} · '
+                f"I {p.intensity:.2f}</div>"
+                f'<div class="fea-mini-foot">{_fit_line(dist, p99)}{"".join(face_chips)}</div>'
+                "</div>"
+            )
+        body = f'<div class="fea-mini-grid">{"".join(cells)}</div>'
+    return (
+        f'<div class="fea-card fea-est">{header}<div class="fea-est-body">{body}</div>'
+        f'<div class="fea-footer">{html.escape(footer)}</div></div>'
+    )

@@ -119,7 +119,7 @@ A 0.10, V −0.12, I 0.32). Simulated on MorphSet (one neutral photo per person,
 |---|---|
 | Identity offset only (implemented) | +0.01 / −0.01 / −0.06 |
 | Subtract own neutral reading (neutral → exactly 0) | −0.04 / −0.06 / −0.33 |
-| … with intensity stretched instead of shifted | −0.04 / −0.06 / −0.16 |
+| … with intensity stretched instead of shifted (demo: **Zero at my neutral**) | −0.04 / −0.06 / −0.16 |
 | Global neutral-anchored rescaling (no calibration) | +0.03 / −0.04 / −0.18 |
 
 Every variant that makes a neutral face read exactly (0, 0, 0) costs accuracy on expressive

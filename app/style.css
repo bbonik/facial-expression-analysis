@@ -212,3 +212,54 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
   background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35); vertical-align: 1px;
 }
 .fea-face .fea-chip { margin: 8px 0 0; }
+
+/* ------------------------------------------------------------------ fixed live layout */
+.fea-col { gap: 12px !important; }
+.fea-grid-row { gap: 12px !important; }
+.fea-est { height: 318px; display: flex; flex-direction: column; overflow: hidden; }
+.fea-est-head { display: flex; align-items: center; gap: 6px; min-height: 22px; flex-wrap: nowrap; overflow: hidden; }
+.fea-est-head .fea-chip { margin-left: 0; }
+.fea-est-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+.fea-est .fea-label { margin: 2px 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fea-est .fea-label .fea-chip { font-size: 10.5px; }
+.fea-est .fea-badge { margin-top: 12px; }
+.fea-est .fea-footer { margin-top: 6px; min-height: 16px; }
+.fea-est-empty { text-align: center; color: var(--fea-text); }
+.fea-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fea-mini {
+  position: relative; padding: 10px 10px 10px 46px; border-radius: 12px; min-height: 104px;
+  background: rgba(30, 41, 59, 0.65); border: 1px solid var(--fea-border); color: var(--fea-text);
+}
+.fea-mini .fea-face-tag { left: 10px; top: 10px; }
+.fea-mini-label { font-weight: 700; font-size: 15px; line-height: 1.25; }
+.fea-mini-foot { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 6px; }
+.fea-fit-line { font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+.fea-fit-ok { color: var(--fea-ok); }
+.fea-fit-warn { color: var(--fea-warn); }
+.fea-fit-line .fea-dot { width: 6px; height: 6px; }
+.fea-chip-ok { color: #a7f3d0; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.35); }
+.fea-chip-info { color: #ddd6fe; background: rgba(139, 92, 246, 0.16); border-color: rgba(139, 92, 246, 0.4); }
+.fea-chip-warn { color: #fde68a; background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.4); }
+.fea-plane .fea-circumplex-wrap { padding: 0; }
+.fea-plane .fea-circumplex { max-height: 500px; }
+.fea-settings-block { padding: 12px 14px !important; }
+.fea-settings-block .fea-section-title { padding: 0 0 6px; }
+
+/* tighten: no padding around plain HTML blocks, plane box = drawing, lighter settings group */
+.fea-col .block.fea-html-plain, .fea-col .block.fea-html-plain > .html-container {
+  padding: 0 !important; margin: 0 !important; min-height: 0 !important;
+}
+.fea-plane, .fea-plane > * { padding: 0 !important; min-height: 0 !important; gap: 0 !important; }
+.fea-plane .fea-circumplex-wrap { display: flex; justify-content: center; line-height: 0; }
+.fea-plane .fea-circumplex { max-height: 520px; display: block; }
+.fea-settings-block {
+  background: var(--fea-card) !important; border: 1px solid var(--fea-border) !important;
+  border-radius: 16px !important; padding: 10px !important; gap: 8px !important;
+}
+.fea-settings-block > .styler, .fea-settings-block .styler { background: transparent !important; gap: 8px !important; }
+.fea-settings-block .fea-section-title { padding: 2px 4px 0 !important; }
+/* no flex stretching: each panel keeps its own size whatever the other column does */
+.fea-col { justify-content: flex-start !important; }
+.fea-col > *, .fea-plane { flex: 0 0 auto !important; }
+.fea-cam { height: 420px !important; max-height: 420px !important; }
+.fea-settings-block > div:not(.block) { border: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }

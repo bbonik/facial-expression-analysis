@@ -180,7 +180,7 @@ def test_calibration_removes_only_the_identity_offset() -> None:
     assert state.calibration is None
     assert is_calibrated(state, 1)
     np.testing.assert_allclose(state.offsets[(1, state.model)][:2], [-0.2, -0.28])
-    assert calibration_status(state)[1] == "ok"
+    assert calibration_status(state) is None  # success shows only as the "calibrated" tag
     # the neutral face now reads like the average neutral face, not like (0, 0)
     state, seen = update_tracks(state, [resting], state.model, 0.0)
     assert seen[0][2].arousal == pytest.approx(0.1)
@@ -195,12 +195,13 @@ def test_calibration_rejects_non_neutral_and_poor_fits() -> None:
 
     smiling = _calibrate(LiveState(), [[_face(0.3, 0.6)]] * 8, [0.1, -0.12, 0.3])
     assert not is_calibrated(smiling, 1)
-    assert "did not look neutral" in calibration_status(smiling)[0]
+    assert "not neutral" in calibration_status(smiling)[0]
+    assert calibration_status(smiling)[1] == "warn"
 
     bad_fit = FaceResult((0, 0, 100, 100), np.zeros((68, 2)), Point(0, 0, 0.3, "x"), 40.0)
     poor = _calibrate(LiveState(), [[bad_fit]] * 8, [0.1, -0.12, 0.3], p99=26.0)
     assert not is_calibrated(poor, 1)
-    assert "landmark fit" in calibration_status(poor)[0]
+    assert "poor fit" in calibration_status(poor)[0]
 
 
 def test_calibration_is_per_model_and_reset_clears_it() -> None:
@@ -223,6 +224,46 @@ def test_calibration_button_counter_starts_a_run() -> None:
     handle_buttons(state, calibrate_clicks=1, reset_clicks=0)
     assert state.calibration is not None
     assert countdown_number(state) == 3
-    assert "neutral face" in calibration_status(state)[0]
+    assert "calibrating" in calibration_status(state)[0]
     handle_buttons(state, calibrate_clicks=1, reset_clicks=0)  # same counter: no new run
     assert state.calibrate_clicks == 1
+
+
+def test_zero_at_my_neutral_maps_own_neutral_to_zero() -> None:
+    resting = FaceResult((0, 0, 100, 100), np.zeros((68, 2)), Point(-0.1, -0.4, 0.4, "x"), 10.0)
+    state = _calibrate(LiveState(), [[resting]] * 8, [0.1, -0.12, 0.3])
+    state, seen = update_tracks(state, [resting], state.model, 0.0, zero=True)
+    p = seen[0][2]
+    assert (p.arousal, p.valence, p.intensity) == pytest.approx((0.0, 0.0, 0.0))
+    assert p.label == "Neutral"
+    # an expression is shown relative to the own neutral; intensity is stretched, not shifted
+    smile = FaceResult((0, 0, 100, 100), np.zeros((68, 2)), Point(0.1, 0.4, 1.0, "x"), 10.0)
+    state, seen = update_tracks(state, [smile], state.model, 0.0, zero=True)
+    p = seen[0][2]
+    assert p.valence == pytest.approx(0.8)
+    assert p.intensity == pytest.approx(1.0)  # full intensity stays at 1
+    # switching the mode off returns to identity-only calibration
+    state, seen = update_tracks(state, [resting], state.model, 0.0, zero=False)
+    assert seen[0][2].valence == pytest.approx(-0.12)
+
+
+def test_estimates_card_has_one_fixed_box_for_any_number_of_faces() -> None:
+    from render import chip, estimates_card
+
+    empty = estimates_card([], model_name="PLS(31)")
+    one = estimates_card(
+        [(Point(0.1, 0.5, 0.5, "Moderately happy"), 18.0, [chip("calibrated")])],
+        model_name="PLS(31)", chips=[chip("calibrating in 2…", "info")], p50=16.0, p99=26.0,
+    )  # fmt: skip
+    many = estimates_card(
+        [(Point(0.1, 0.5, 0.5, "a", "1", "#a78bfa"), 18.0, []),
+         (Point(-0.2, 0.1, 0.3, "b", "2", "#38bdf8"), 40.0, [])],
+        model_name="PLS(31)", p99=26.0,
+    )  # fmt: skip
+    for card in (empty, one, many):
+        assert card.startswith('<div class="fea-card fea-est">')  # same fixed-height box
+        assert "fea-status" not in card  # no banners
+    assert "calibrated" in one
+    assert "calibrating in 2" in one
+    assert many.count('class="fea-mini"') == 2
+    assert "poor fit" in many
