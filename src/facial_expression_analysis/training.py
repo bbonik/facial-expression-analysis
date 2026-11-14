@@ -209,6 +209,8 @@ def neutral_mean(
     (0, 0) on average. Per-person calibration aligns a person's neutral face with this
     population mean, removing only the person-specific offset (see the model card).
     """
+    if "label" not in data.meta:
+        return [0.0] * len(model.targets)
     if features is None:
         features = compute_features(data.landmarks, model.features)
     neutral = (data.meta["label"].astype(str) == "NE").to_numpy().copy()
