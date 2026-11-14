@@ -39,6 +39,16 @@ MORPHSET = RemoteFile(
     sha256="8b59c090d0937b3c2da7d5a063b5439dfe89fe3082dbcf7bebe6bc5192c46d9e",
 )
 
+POSE_DATASET = RemoteFile(
+    name="landmark_dataset.csv",
+    url=(
+        "https://raw.githubusercontent.com/bbonik/facial-landmark-frontalization/"
+        "aea4c35a23f2a6d74c43680d6873a961fbfa7e20/data/landmark_dataset.csv"
+    ),
+    sha256="8b05214e6ac15090a423528ddbb3d446620d28050b9f625b2cc8838d426cc631",
+)
+"""Multi-pose landmark dataset used to train the frontalization model."""
+
 
 def cache_dir() -> Path:
     """Return (and create) the asset cache directory."""
@@ -117,3 +127,11 @@ def fetch_morphset(path: str | Path | None = None) -> Path:
     if path is not None:
         raise FileNotFoundError(f"MorphSet file not found: {path}")
     return _download(MORPHSET, cache_dir())
+
+
+def fetch_pose_dataset() -> Path:
+    """Return the path of the multi-pose landmark dataset, downloading it if needed."""
+    target = cache_dir() / POSE_DATASET.name
+    if target.is_file():
+        return target
+    return _download(POSE_DATASET, cache_dir())

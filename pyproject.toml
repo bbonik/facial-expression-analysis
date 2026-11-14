@@ -94,7 +94,7 @@ warn_unreachable = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["dlib", "cv2", "pooch", "sklearn.*", "joblib"]
+module = ["dlib", "cv2", "pooch", "sklearn.*", "joblib", "scipy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

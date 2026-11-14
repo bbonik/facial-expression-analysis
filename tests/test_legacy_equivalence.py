@@ -25,7 +25,7 @@ LEGACY_SCALE = np.arange(17, 68)
 
 
 def test_frontalization_matches_legacy(legacy_reference: dict[str, np.ndarray]) -> None:
-    frontal = Frontalizer()(legacy_reference["landmarks"])
+    frontal = Frontalizer.from_2021()(legacy_reference["landmarks"])
     np.testing.assert_allclose(frontal, legacy_reference["frontal"], atol=1e-12)
 
 
@@ -38,13 +38,17 @@ def test_legacy_model_reproduced_exactly(
     )
     assert model.features.n_features == feats.n_features == 1275
 
-    frontal = Frontalizer()(legacy_reference["landmarks"])
+    frontal = Frontalizer.from_2021()(legacy_reference["landmarks"])
     np.testing.assert_allclose(
         model.predict(frontal), legacy_reference["raw_predictions"], atol=1e-5
     )
 
     # Labels: the legacy code rounded arousal/valence to 3 decimals before
     # labelling, which matters for faces right at an intensity boundary.
-    avi = EmotionEstimator(model).predict(legacy_reference["landmarks"]).round(3)
+    avi = (
+        EmotionEstimator(model, Frontalizer.from_2021())
+        .predict(legacy_reference["landmarks"])
+        .round(3)
+    )
     labels = [str(describe_emotion(a, v)) for a, v, _ in avi]
     assert labels == [str(s).strip() for s in legacy_reference["labels"]]

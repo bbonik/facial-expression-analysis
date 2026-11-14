@@ -108,6 +108,32 @@ def train(
     typer.echo(f"Saved model to {output}")
 
 
+@app.command("train-frontalization")
+def train_frontalization(
+    output: Annotated[Path, typer.Option("--output", "-o")] = Path(
+        "models/frontalization_dlib68.npy"
+    ),
+    mirror: Annotated[str, typer.Option(help="Mirroring: none, naive (2021), permute.")] = "none",
+    ridge: Annotated[float, typer.Option(min=0.0, help="Per-sample ridge penalty.")] = 0.0,
+) -> None:
+    """Train the landmark frontalization model on the multi-pose dataset."""
+    from .frontalization_training import (
+        MirrorMode,
+        build_training_pairs,
+        fit_frontalization,
+        load_pose_dataset,
+        mean_shape,
+    )
+
+    data = load_pose_dataset()
+    template = mean_shape(data.landmarks)
+    pairs = build_training_pairs(data, template, MirrorMode(mirror))
+    weights = fit_frontalization(pairs, ridge=ridge)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    np.save(output, weights, allow_pickle=False)
+    typer.echo(f"Trained on {len(pairs.inputs)} pairs from {len(data)} faces -> {output}")
+
+
 @app.command()
 def evaluate(
     model: ModelOpt = None,

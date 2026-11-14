@@ -11,7 +11,9 @@ from numpy.typing import ArrayLike, NDArray
 from .constants import N_LANDMARKS
 from .geometry import as_landmark_batch, procrustes_normalize
 
+WEIGHTS_2021 = "frontalization_dlib68_2021.npy"
 DEFAULT_WEIGHTS = "frontalization_dlib68.npy"
+"""v2 weights: least squares without mirroring (see experiments/07_frontalization.py)."""
 
 
 class Frontalizer:
@@ -44,9 +46,14 @@ class Frontalizer:
         """Load weights from a ``.npy`` file."""
         return cls(np.load(path, allow_pickle=False))
 
+    @classmethod
+    def from_2021(cls) -> Frontalizer:
+        """Load the original ICIP 2020 weights (least squares, naive mirroring)."""
+        return cls(cls._load_bundled(WEIGHTS_2021))
+
     @staticmethod
-    def _load_bundled() -> NDArray[np.float64]:
-        ref = resources.files(__package__).joinpath("assets", DEFAULT_WEIGHTS)
+    def _load_bundled(name: str = DEFAULT_WEIGHTS) -> NDArray[np.float64]:
+        ref = resources.files(__package__).joinpath("assets", name)
         with resources.as_file(ref) as path:
             return np.asarray(np.load(path, allow_pickle=False), dtype=np.float64)
 
