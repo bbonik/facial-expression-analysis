@@ -128,6 +128,10 @@ worse on jitter, pose and scream, so it was not adopted.
   Treat estimates above the 99th percentile as unreliable.
 - **Data overlap.** KDEF persons appear both in MorphSet and in the frontalization training
   data. The pose and external tests therefore exclude KDEF.
+- **Pose-dataset landmarks.** The Multi-PIE and CAS-PEAL landmarks were most likely fitted
+  automatically and selected by the poses each database provides, not checked by hand. About
+  1 in 16 scream shapes looked malformed on inspection. The pose, external and behavioural
+  tests therefore contain some landmark noise, which affects all models equally.
 - **Demographics.** The source databases mainly show young to middle-aged adults of European
   appearance (FACES adds older adults). Performance on other groups is untested.
 
