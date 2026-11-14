@@ -139,3 +139,4 @@ models/
 !src/facial_expression_analysis/assets/*
 outputs/
 .ruff_cache/
+data/Morphset.csv.zip

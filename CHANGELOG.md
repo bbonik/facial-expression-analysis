@@ -61,7 +61,8 @@
   56 MB scikit-learn 0.23 pickle is gone, and inference no longer needs scikit-learn.
 - Feature extraction and frontalization are vectorised: 166k faces take 3 s, versus 24 s for
   the original per-face loop.
-- Large files are no longer tracked: the dlib model downloads on first use (hash-verified).
+- Large files are no longer tracked. The dlib model and MorphSet (GitHub release `data-v1`)
+  download on first use, hash-verified.
 - Detection is behind a `LandmarkDetector` interface, ready for more back-ends.
 
 ### Added

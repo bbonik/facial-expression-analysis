@@ -182,7 +182,7 @@ tests/                   Unit, regression and equivalence tests against the 2021
 experiments/             Reproducible analyses behind every claim (see experiments/README.md)
 reports/figures/         Figures produced by the experiments
 notebooks/archive/       Original 2021 notebook
-data/                    MorphSet (zipped) and sample images
+data/images/             Sample images (MorphSet downloads from the data-v1 release)
 ```
 
 ## Development
