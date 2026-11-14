@@ -56,7 +56,7 @@ The dlib landmark model (~100 MB) is downloaded and cached on first use.
 ### Web demo (Gradio)
 
 ```bash
-uv run --extra demo python app/app.py      # http://127.0.0.1:7860
+scripts/web_demo.sh        # installs dependencies, fetches the dlib model, opens your browser
 ```
 
 Three tabs:

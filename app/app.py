@@ -1,11 +1,12 @@
 """Gradio web demo: live webcam and photo analysis of dimensional facial expressions.
 
-Run locally:  uv run --extra demo python app/app.py
+Run locally:  scripts/web_demo.sh   (or: uv run --extra demo python app/app.py)
 Deploy:       scripts/deploy_space.sh  (Hugging Face Spaces)
 """
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -265,5 +266,8 @@ demo = build()
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=4).launch(
-        theme=THEME, css_paths=[HERE / "style.css"], js=FORCE_DARK
+        theme=THEME,
+        css_paths=[HERE / "style.css"],
+        js=FORCE_DARK,
+        inbrowser=os.environ.get("FEA_OPEN_BROWSER") == "1",
     )
