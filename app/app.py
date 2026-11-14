@@ -16,7 +16,7 @@ sys.path.insert(0, str(HERE))
 
 import gradio as gr
 import numpy as np
-from core import DEFAULT_MODEL, MODELS, Engine, LiveState, largest, update_live
+from core import DEFAULT_MODEL, MODELS, Engine, LiveState, update_tracks
 from render import (
     circumplex_svg,
     draw_overlay,
@@ -76,24 +76,33 @@ def live_step(frame, model, smoothing, show_landmarks, state: LiveState | None):
         )
     frame = np.ascontiguousarray(frame[..., :3], dtype=np.uint8)
     faces = ENGINE.analyze(frame, model)
-    face = largest(faces)
-    state, smoothed = update_live(state, face, model, smoothing)
+    state, seen = update_tracks(state, faces, model, smoothing)
+    points = [p for _, _, p in seen]
     overlay = draw_overlay(
         frame,
-        [f.box for f in faces],
-        [f.landmarks for f in faces],
-        [f.point for f in faces],
+        [f.box for _, f, _ in seen],
+        [f.landmarks for _, f, _ in seen],
+        points,
         show_landmarks=show_landmarks,
     )
     footer = f"{state.fps:.0f} fps · smoothing {smoothing:.2f}" if state.fps else ""
-    card = metrics_card(
-        smoothed,
-        model_name=model,
-        fit=ENGINE.fit(face.distance if face else None),
-        footer=footer,
-    )
-    points = [smoothed] if smoothed else []
-    return overlay, _wrap_svg(circumplex_svg(points, state.trail, size=640)), card, state
+    if len(seen) <= 1:  # one face: the full card
+        face = seen[0][1] if seen else None
+        card = metrics_card(
+            points[0] if points else None,
+            model_name=model,
+            fit=ENGINE.fit(face.distance if face else None),
+            footer=footer,
+        )
+    else:  # several faces: one compact card each, in the face's colour
+        rows = [(p, fit_badge(*ENGINE.fit(f.distance))) for _, f, p in seen]
+        card = (
+            f'<div class="fea-card"><div class="fea-kicker">{model} · {len(seen)} faces</div>'
+            f'<div style="margin-top:10px">{faces_grid(rows)}</div>'
+            f'<div class="fea-footer">{footer}</div></div>'
+        )
+    trails = [(t.trail, t.color if len(seen) > 1 else "") for t, _, _ in seen]
+    return overlay, _wrap_svg(circumplex_svg(points, trails, size=640)), card, state
 
 
 def analyze_photo(image, model, show_landmarks):
@@ -247,7 +256,7 @@ def build() -> gr.Blocks:
                         cam = gr.Image(
                             sources=["webcam"], streaming=True, type="numpy",
                             show_label=False, webcam_options=gr.WebcamOptions(mirror=True),
-                            elem_classes="fea-cam", height=560,
+                            elem_classes="fea-cam", height=420,
                         )  # fmt: skip
                         # Drawn exactly over the raw preview, so the user sees one feed; the
                         # camera's own start/stop button stays on top (see style.css).

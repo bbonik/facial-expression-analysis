@@ -28,6 +28,11 @@ def valence_rgb(valence: float) -> tuple[int, int, int]:
     return tuple(round((1 - t) * n + t * e) for n, e in zip(NEUTRAL, end, strict=True))  # type: ignore[return-value]
 
 
+def _hex_rgb(colour: str) -> tuple[int, int, int]:
+    c = colour.lstrip("#")
+    return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
+
+
 def valence_hex(valence: float) -> str:
     return "#{:02x}{:02x}{:02x}".format(*valence_rgb(valence))
 
@@ -41,7 +46,8 @@ class Point:
     valence: float
     intensity: float
     label: str
-    tag: str = ""  # e.g. a face number in photo mode
+    tag: str = ""  # face number when several faces are shown
+    accent: str = ""  # per-face colour (hex) when several faces are shown
 
 
 def _sectors() -> list[tuple[str, float, float]]:
@@ -67,11 +73,13 @@ def _sector_of(angle: float) -> int:
 # --------------------------------------------------------------------------- circumplex
 def circumplex_svg(
     points: Sequence[Point] = (),
-    trail: Sequence[tuple[float, float]] = (),
+    trails: Sequence[tuple[Sequence[tuple[float, float]], str]] = (),
     *,
     size: int = 420,
 ) -> str:
-    """Russell's circumplex with the 24 emotion words, a fading trail and the current points.
+    """Russell's circumplex with the 24 emotion words, fading trails and the current points.
+
+    ``trails`` holds one ``((arousal, valence) history, colour)`` per tracked face.
 
     Coordinates: x = valence, y = -arousal, unit circle = maximal intensity.
     """
@@ -165,14 +173,14 @@ def circumplex_svg(
             f'transform="rotate({rot:.2f} {x:.4f} {y:.4f})">{word}</text>'
         )
 
-    # trail
-    if len(trail) > 1:
+    # trails
+    for trail, colour in trails:
         n = len(trail)
         for k in range(1, n):
             (a0_, v0), (a1_, v1) = trail[k - 1], trail[k]
             parts.append(
                 f'<line x1="{v0:.4f}" y1="{-a0_:.4f}" x2="{v1:.4f}" y2="{-a1_:.4f}" '
-                f'stroke="{ACCENT}" stroke-opacity="{0.08 + 0.5 * k / n:.3f}" '
+                f'stroke="{colour or ACCENT}" stroke-opacity="{0.08 + 0.5 * k / n:.3f}" '
                 'stroke-width="0.016" stroke-linecap="round"/>'
             )
 
@@ -183,12 +191,13 @@ def circumplex_svg(
             f'<circle cx="{p.valence:.4f}" cy="{-p.arousal:.4f}" r="0.075" fill="{c}" '
             'fill-opacity="0.25" filter="url(#fea-glow)"/>'
             f'<circle cx="{p.valence:.4f}" cy="{-p.arousal:.4f}" r="0.04" fill="{c}" '
-            'stroke="#0b1020" stroke-width="0.012"/>'
+            f'stroke="{p.accent or "#0b1020"}" stroke-width="{0.018 if p.accent else 0.012}"/>'
         )
         if p.tag:
             parts.append(
                 f'<text x="{p.valence + 0.06:.4f}" y="{-p.arousal - 0.06:.4f}" '
-                f'font-size="0.075" font-weight="700" fill="{c}">{html.escape(p.tag)}</text>'
+                f'font-size="0.08" font-weight="800" fill="{p.accent or c}">'
+                f"{html.escape(p.tag)}</text>"
             )
     parts.append("</svg>")
     return "".join(parts)
@@ -277,7 +286,8 @@ def faces_grid(rows: Sequence[tuple[Point, str]]) -> str:
         color = valence_hex(p.valence)
         cards.append(
             '<div class="fea-face">'
-            f'<div class="fea-face-tag" style="background:{color}">{html.escape(p.tag)}</div>'
+            f'<div class="fea-face-tag" style="background:{p.accent or color}">'
+            f"{html.escape(p.tag)}</div>"
             f'<div class="fea-face-label" style="color:{color}">{html.escape(p.label)}</div>'
             f'<div class="fea-face-nums">A {p.arousal:+.2f} · V {p.valence:+.2f} · '
             f"I {p.intensity:.2f}</div>{badge}</div>"
@@ -325,7 +335,8 @@ def draw_overlay(
         pill = out.copy()
         cv2.rectangle(pill, (bx0, by0), (bx1, by1), (15, 18, 32), -1, cv2.LINE_AA)
         out = cv2.addWeighted(pill, 0.78, out, 0.22, 0)
-        cv2.rectangle(out, (bx0, by0), (bx0 + max(3, pad // 2), by1), color, -1)
+        bar = _hex_rgb(p.accent) if p.accent else color
+        cv2.rectangle(out, (bx0, by0), (bx0 + max(4, pad // 2 + 2), by1), bar, -1)
         cv2.putText(out, text, (bx0 + pad + 2, by1 - pad), cv2.FONT_HERSHEY_DUPLEX, fs,
                     (240, 244, 255), 1, cv2.LINE_AA)  # fmt: skip
     return out
