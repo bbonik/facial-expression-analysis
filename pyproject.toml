@@ -87,6 +87,7 @@ ignore = [
 "experiments/**" = ["D", "E501", "E731", "E741", "NPY002"]
 "app/**" = ["RUF001"]  # typographic dashes / minus signs in UI text
 "app/app.py" = ["E402", "E501"]  # sys.path setup before imports; long HTML content
+"notebooks/**" = ["E402", "E501", "RUF001"]  # setup cell before imports; long messages; typography
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

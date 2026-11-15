@@ -33,8 +33,10 @@
   (`data`, `train`, `evaluation`, `metrics`, `frontalization`, `interpret`); it is loaded
   lazily, so the core install (`fea predict`, `fea webcam`) no longer imports pandas. Sample
   photos are in `examples/`, figures and screenshots in `docs/`. The archived 2021 notebook
-  and the old README images were removed (the 2021 code remains at tag `v1.0.0`); a new
-  `notebooks/walkthrough.ipynb` shows the method end to end. The README was rewritten with installation, usage and a scientific section.
+  and the old README images were removed (the 2021 code remains at tag `v1.0.0`); six
+  executed notebooks (`notebooks/00`–`05`) cover the walkthrough, data exploration,
+  frontalization, feature and model selection, retraining and export, and error analysis and
+  interpretability. The README was rewritten with installation, usage and a scientific section.
 - **Model selection on accuracy and behaviour.** Seven regressors were compared offline on
   five axes (`experiments/08_model_comparison.py`). RBF kernel ridge had the best accuracy:
   +0.086 / +0.043 / +0.053 CCC (A/V/I) over PLS(31) in person-grouped CV, winning every

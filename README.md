@@ -164,22 +164,27 @@ uv run fea benchmark examples/happy.jpg          # per-stage latency
 Every number in this README can be reproduced with the scripts in
 [`experiments/`](experiments/README.md).
 
-### 6. Walkthrough notebook
+### 6. Notebooks: the data-science work
 
-[`notebooks/walkthrough.ipynb`](notebooks/walkthrough.ipynb) goes through the method end to end
-with the package's functions, in about 2 minutes:
-- the MorphSet labels;
-- the pipeline on one face;
-- training PLS(31) with a person-wise split;
-- why splitting by subject id leaks identity;
-- the facial movements the model responds to;
-- prediction on a photo.
+Six notebooks in [`notebooks/`](notebooks) tell the story of the project with the package's own
+functions. Their outputs are saved, so GitHub shows them without running anything.
 
-The outputs are saved in the notebook, so GitHub shows them.
+| Notebook | What it covers | Runtime |
+|---|---|---|
+| [`00_walkthrough`](notebooks/00_walkthrough.ipynb) | The method end to end in one pass | 2 min |
+| [`01_data_exploration`](notebooks/01_data_exploration.ipynb) | MorphSet: labels, subject ids vs persons, mirrored copies, pose, the expression-driven scale bias | < 1 min |
+| [`02_frontalization`](notebooks/02_frontalization.ipynb) | Retraining the frontalizer with person-grouped CV; how far the estimate moves when the head turns | 2 min |
+| [`03_features_and_model_selection`](notebooks/03_features_and_model_selection.ipynb) | Landmark sets and scale; PLS components and ridge paths; PLS vs ridge vs kernel ridge (CV, leave-one-database-out, jitter); behavioural tests | 5 min |
+| [`04_retrain_and_export`](notebooks/04_retrain_and_export.ipynb) | Retraining both bundled models, their metadata, exporting `.npz` files and using them | 1 min |
+| [`05_error_analysis_and_interpretability`](notebooks/05_error_analysis_and_interpretability.ipynb) | Out-of-fold errors, bootstrap CIs, calibration, bias by expression and database; weights, VIP, facial movements, PLS components | 2 min |
 
 ```bash
-uv run --extra notebooks jupyter lab notebooks/walkthrough.ipynb
+uv run --extra notebooks jupyter lab notebooks/
 ```
+
+The notebooks use light settings (fewer folds, no mirrored copies) so they run in minutes. The
+scripts in [`experiments/`](experiments/README.md) are the full, exact runs behind the numbers
+in this README and the model card.
 
 ---
 
@@ -524,7 +529,7 @@ facial-expression-analysis/
 │                         interpretability (interpret)
 ├── app/                  Gradio web demo (app.py layout, core.py engine, render.py SVG/HTML)
 ├── scripts/              web_demo.sh, demo.sh, deploy_space.sh (Hugging Face), readme_figures.py
-├── notebooks/            walkthrough.ipynb: the method end to end
+├── notebooks/            00–05: walkthrough, data, frontalization, model selection, retraining, errors
 ├── experiments/          13 reproducible analyses behind every claim (see its README)
 ├── tests/                unit, regression and equivalence tests against the 2021 outputs
 ├── examples/             sample photos (used by the demos and tests)

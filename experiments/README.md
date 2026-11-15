@@ -1,6 +1,8 @@
 # Experiments
 
-Standalone analyses behind the claims in the main README and CHANGELOG. Run them from the
+Standalone analyses behind the claims in the main README and CHANGELOG. The notebooks in
+`notebooks/` present the same work as a readable narrative with lighter settings; these scripts
+are the full, exact runs. Run them from the
 repository root, e.g. `uv run python experiments/05_feature_config_cv.py`.
 
 | Script | Question | Finding |

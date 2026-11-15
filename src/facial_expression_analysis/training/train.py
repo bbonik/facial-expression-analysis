@@ -123,7 +123,7 @@ def train_model(data: MorphSet, config: TrainConfig | None = None) -> TrainResul
         "landmark_subset": config.subset.value,
         "scale_reference": config.scale.value,
         "config": config.to_dict(),
-        "split": "by person (see facial_expression_analysis.data)",
+        "split": "by person (see facial_expression_analysis.training.data)",
         "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "package_version": __version__,
         "sklearn_version": sklearn_version,
