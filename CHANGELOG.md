@@ -4,9 +4,10 @@
 
 ### Added
 - **Working paper** `paper/pls_action_units.md` with `experiments/14_pls_dimensionality.py`:
-  expression geometry has about 20 dimensions above the landmark noise floor; the first ~20
-  PLS components correspond to action units; beyond them the signal-to-noise ratio is about 1,
-  which is where offline accuracy and live behaviour diverge.
+  dlib's landmark noise measured from mirrored re-detections; expression has about 20 strong
+  and 30 reliable dimensions above it; the first ~20 PLS components correspond to action units;
+  at webcam noise levels the accuracy-optimal model has about 30 components, which explains why
+  PLS(31) behaves best live. Figures in a ggplot-like style.
 - `training.action_units`: geometric templates of 16 FACS action units on the 68-point face.
 
 ## [2.0.0] - 2026-11-15

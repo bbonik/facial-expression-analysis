@@ -475,12 +475,16 @@ the behavioural tests are now part of model selection.
 
 **Why?** The working paper [*Why a low-dimensional linear model wins in real
 time*](paper/pls_action_units.md) investigates this (`experiments/14`).
-- **About 20 dimensions.** Expression geometry has about 20 dimensions above dlib's noise
-  floor, in morphed and in real expressions alike.
+- **Measured landmark noise.** Mirrored copies of each MorphSet image act as independent
+  re-detections. Their difference is pure detector noise: about 1 px, concentrated in a few
+  whole-shape directions.
+- **About 20 strong and 30 reliable dimensions.** Expression movement exceeds four times the
+  noise in about 20 directions and twice the noise in about 30.
 - **The first ~20 PLS components are action units.** For example: jaw drop, smile, brow
-  lowerer, chin raiser.
-- **Beyond them, signal-to-noise falls to about 1.** Extra components buy offline accuracy with
-  live jitter and pose sensitivity.
+  lowerer, chin raiser. After them, AU structure, replicability and signal-to-noise fade.
+- **Noise sets the best complexity.** At the noise of a webcam with the original detector, the
+  most accurate model has about 30 components (or an equivalent ridge penalty); on clean photos,
+  more complex models win. Extra components also add jitter and pose sensitivity.
 - **The kernel model fails differently.** Its response to the same action unit varies about 12
   times more across faces.
 - **PLS itself is not the secret.** A ridge model regularised to the same effective complexity
