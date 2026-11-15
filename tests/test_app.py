@@ -271,3 +271,14 @@ def test_estimates_card_has_one_fixed_box_for_any_number_of_faces() -> None:
     assert "fea-chip" not in rest
     assert many.count('class="fea-mini"') == 2
     assert "poor fit" in many
+
+
+def test_calibrated_and_zeroed_points_stay_inside_the_circle() -> None:
+    from core import apply_offset, zero_at_neutral
+
+    raw = np.array([0.8, 0.7, 0.9])  # inside the circle (radius 1.06 after the offset)
+    out = apply_offset(raw, np.array([-0.3, -0.2, 0.1]))
+    assert np.hypot(out[0], out[1]) == pytest.approx(1.0)
+    assert np.arctan2(out[0], out[1]) == pytest.approx(np.arctan2(1.1, 0.9))
+    z = zero_at_neutral(np.array([0.9, 0.9, 0.9]), np.array([-0.2, -0.3, 0.3]))
+    assert np.hypot(z[0], z[1]) <= 1 + 1e-12

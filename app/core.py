@@ -13,6 +13,7 @@ from facial_expression_analysis import DlibLandmarkDetector, EmotionEstimator, F
 from facial_expression_analysis.labels import describe_emotion
 from facial_expression_analysis.landmarks import BoxRegressor, LandmarkTracker
 from facial_expression_analysis.model import EmotionModel, KernelEmotionModel, load_model
+from facial_expression_analysis.pipeline import clip_to_unit_circle
 
 MODELS = {
     "PLS(31) · default": "Linear, well-calibrated, robust to head pose",
@@ -258,11 +259,12 @@ MAX_OFFSET = 0.45  # larger A/V offsets mean the face was probably not neutral
 def apply_offset(
     raw: NDArray[np.float64], offset: NDArray[np.float64] | None
 ) -> NDArray[np.float64]:
-    """Subtract a person's offset; keep A, V in [-1, 1] and I in [0, 1]."""
+    """Subtract a person's offset; keep (A, V) inside the unit circle and I in [0, 1]."""
     if offset is None:
         return raw
     out = raw - offset
-    return np.array([np.clip(out[0], -1, 1), np.clip(out[1], -1, 1), np.clip(out[2], 0, 1)])
+    a, v = clip_to_unit_circle(out[:2])
+    return np.array([a, v, np.clip(out[2], 0, 1)])
 
 
 def zero_at_neutral(raw: NDArray[np.float64], neutral: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -274,7 +276,8 @@ def zero_at_neutral(raw: NDArray[np.float64], neutral: NDArray[np.float64]) -> N
     """
     a, v = raw[0] - neutral[0], raw[1] - neutral[1]
     i = (raw[2] - neutral[2]) / max(1.0 - neutral[2], 0.2)
-    return np.array([np.clip(a, -1, 1), np.clip(v, -1, 1), np.clip(i, 0, 1)])
+    a, v = clip_to_unit_circle([a, v])
+    return np.array([a, v, np.clip(i, 0, 1)])
 
 
 def displayed(state: LiveState, track_id: int, raw: NDArray[np.float64]) -> NDArray[np.float64]:

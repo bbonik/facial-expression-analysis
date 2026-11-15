@@ -110,3 +110,24 @@ def test_cli_predict_json(tmp_path: Path) -> None:
     (faces,) = payload.values()
     assert len(faces) == 1
     assert (tmp_path / "happy_annotated.png").is_file()
+
+
+def test_clip_to_unit_circle_keeps_the_angle() -> None:
+    from facial_expression_analysis.pipeline import clip_to_unit_circle
+
+    pts = np.array([[0.9, 0.9], [0.3, -0.4], [-2.0, 0.0], [0.0, 0.0]])
+    out = clip_to_unit_circle(pts)
+    np.testing.assert_allclose(np.hypot(out[:, 0], out[:, 1]), [1.0, 0.5, 1.0, 0.0])
+    np.testing.assert_allclose(out[1], pts[1])  # inside: unchanged
+    np.testing.assert_allclose(np.arctan2(out[0, 0], out[0, 1]), np.pi / 4)
+    assert clip_to_unit_circle([3.0, 4.0]).tolist() == [0.6, 0.8]
+
+
+def test_estimates_stay_inside_the_circle(landmarks) -> None:
+    from facial_expression_analysis import EmotionEstimator, KernelEmotionModel
+
+    for est in (EmotionEstimator(), EmotionEstimator(KernelEmotionModel.load())):
+        rng = np.random.default_rng(0)
+        noisy = landmarks + rng.normal(0, 4, landmarks.shape)  # push some outputs far out
+        out = est.predict(noisy)
+        assert np.all(np.hypot(out[:, 0], out[:, 1]) <= 1 + 1e-12)

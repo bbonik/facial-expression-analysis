@@ -189,7 +189,9 @@ Instead of picking one of a few categories ("happy", "angry"…), the model plac
 - **arousal** ∈ [−1, 1]: calm ↔ activated;
 - **intensity** ∈ [0, 1]: distance from neutral.
 
-Mixed and subtle expressions get in-between values instead of being forced into a class.
+Mixed and subtle expressions get in-between values instead of being forced into a class. Predictions
+are kept inside the unit circle: a point beyond it is scaled back onto the circle, keeping
+its angle and therefore its emotion word. This also holds after per-person calibration.
 
 ### 2. Training data: MorphSet
 

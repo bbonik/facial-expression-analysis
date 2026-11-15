@@ -3,6 +3,9 @@
 ## [Unreleased] - v2.0.0
 
 ### Fixed
+- Arousal/valence were clipped per axis, so points could reach the corners of the square
+  (radius up to 1.41), e.g. the kernel model after calibration. They are now scaled back onto
+  the unit circle, keeping their angle (`clip_to_unit_circle`).
 - **Feature template indexing.** The 2021 Python code was ported from a MATLAB system built
   on the 49-point IntraFace landmarks, whose arrays contain no jaw points. Its feature template
   kept IntraFace-style *positions* (0–50) while indexing the 68-point dlib array. As a result

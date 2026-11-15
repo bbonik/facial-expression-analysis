@@ -109,7 +109,7 @@ class EmotionEstimator:
 
     def _postprocess(self, raw: NDArray[np.float64]) -> NDArray[np.float64]:
         out = np.empty_like(raw)
-        out[:, :2] = np.clip(raw[:, :2], -1.0, 1.0)
+        out[:, :2] = clip_to_unit_circle(raw[:, :2])
         if self.intensity_from_av:
             out[:, 2] = np.hypot(out[:, 0], out[:, 1])
         else:
@@ -150,6 +150,17 @@ class EmotionEstimator:
             return []
         estimates = self.estimate_batch(np.stack([f.landmarks for f in faces]))
         return [FaceAnalysis(f.box, e) for f, e in zip(faces, estimates, strict=True)]
+
+
+def clip_to_unit_circle(av: ArrayLike) -> NDArray[np.float64]:
+    """Scale (arousal, valence) points outside the unit circle back onto it.
+
+    The circumplex is a disc: a point keeps its angle (hence its emotion word) and its
+    radius is capped at 1. Accepts ``(2,)`` or ``(n, 2)``.
+    """
+    arr = np.asarray(av, dtype=np.float64)
+    radius = np.hypot(arr[..., 0], arr[..., 1])[..., None]
+    return np.asarray(arr / np.maximum(radius, 1.0), dtype=np.float64)
 
 
 def largest_face(faces: Sequence[FaceAnalysis]) -> FaceAnalysis | None:
