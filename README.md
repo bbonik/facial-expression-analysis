@@ -17,7 +17,7 @@ with no GPU.
 > code is tagged [`v1.0.0`](../../tree/v1.0.0).
 
 **Contents:** [Install](#install) · [Use it](#use-it) · [How it works (science)](#how-it-works)
-· [Results](#results) · [Repository layout](#repository-layout) · [Development](#development)
+· [Results](#results) · [Paper](paper/pls_action_units.md) · [Repository layout](#repository-layout) · [Development](#development)
 · [Citation](#citation) · [Model card](MODEL_CARD.md)
 
 ---
@@ -473,6 +473,19 @@ the behavioural tests are now part of model selection.
 
 ![Synthetic smile trajectories](docs/figures/behavioural_smile.png)
 
+**Why?** The working paper [*Why a low-dimensional linear model wins in real
+time*](paper/pls_action_units.md) investigates this (`experiments/14`).
+- **About 20 dimensions.** Expression geometry has about 20 dimensions above dlib's noise
+  floor, in morphed and in real expressions alike.
+- **The first ~20 PLS components are action units.** For example: jaw drop, smile, brow
+  lowerer, chin raiser.
+- **Beyond them, signal-to-noise falls to about 1.** Extra components buy offline accuracy with
+  live jitter and pose sensitivity.
+- **The kernel model fails differently.** Its response to the same action unit varies about 12
+  times more across faces.
+- **PLS itself is not the secret.** A ridge model regularised to the same effective complexity
+  behaves at least as well.
+
 ### Features (5-fold CV by person, PLS(31), CCC mean ± sd)
 
 | Features | Arousal | Valence | Intensity |
@@ -530,9 +543,10 @@ facial-expression-analysis/
 ├── app/                  Gradio web demo (app.py layout, core.py engine, render.py SVG/HTML)
 ├── scripts/              web_demo.sh, demo.sh, deploy_space.sh (Hugging Face), readme_figures.py
 ├── notebooks/            00–05: walkthrough, data, frontalization, model selection, retraining, errors
-├── experiments/          13 reproducible analyses behind every claim (see its README)
+├── experiments/          14 reproducible analyses behind every claim (see its README)
 ├── tests/                unit, regression and equivalence tests against the 2021 outputs
 ├── examples/             sample photos (used by the demos and tests)
+├── paper/                working paper: PLS components, action units and live behaviour
 ├── docs/                 figures (from the experiments) and README screenshots
 ├── MODEL_CARD.md         evaluation, calibration, limitations, intended use
 └── CHANGELOG.md

@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Working paper** `paper/pls_action_units.md` with `experiments/14_pls_dimensionality.py`:
+  expression geometry has about 20 dimensions above the landmark noise floor; the first ~20
+  PLS components correspond to action units; beyond them the signal-to-noise ratio is about 1,
+  which is where offline accuracy and live behaviour diverge.
+- `training.action_units`: geometric templates of 16 FACS action units on the 68-point face.
+
 ## [2.0.0] - 2026-11-15
 
 ### Fixed
