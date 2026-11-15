@@ -32,9 +32,9 @@
 - Repository reorganised. Training-only modules moved to `facial_expression_analysis.training`
   (`data`, `train`, `evaluation`, `metrics`, `frontalization`, `interpret`); it is loaded
   lazily, so the core install (`fea predict`, `fea webcam`) no longer imports pandas. Sample
-  photos are in `examples/`, figures and screenshots in `docs/`. The archived 2021 notebook,
-  the old README images and the `notebooks` extra were removed (the 2021 code remains at tag
-  `v1.0.0`). The README was rewritten with installation, usage and a scientific section.
+  photos are in `examples/`, figures and screenshots in `docs/`. The archived 2021 notebook
+  and the old README images were removed (the 2021 code remains at tag `v1.0.0`); a new
+  `notebooks/walkthrough.ipynb` shows the method end to end. The README was rewritten with installation, usage and a scientific section.
 - **Model selection on accuracy and behaviour.** Seven regressors were compared offline on
   five axes (`experiments/08_model_comparison.py`). RBF kernel ridge had the best accuracy:
   +0.086 / +0.043 / +0.053 CCC (A/V/I) over PLS(31) in person-grouped CV, winning every
@@ -96,6 +96,8 @@
   and per model, with a countdown and checks for non-neutral faces and poor fits (see the
   model card). The optional **Zero at my neutral** mode maps a calibrated face's own neutral
   to exactly (0, 0, 0), at a measured accuracy cost. Models now store `neutral_mean`.
+- Web demo: the Photo tab uses the same layout as the Live tab (photo and settings | AV plane
+  and estimates), with the analysed photo drawn over the upload box.
 - Web demo layout is fixed: two equal columns (camera and settings | AV plane and estimates)
   that end on the same line; settings in four group boxes (model, landmarks, smoothing,
   calibration); Quit in the top-right corner; status appears only as tags, so no panel

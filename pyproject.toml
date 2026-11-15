@@ -39,6 +39,11 @@ train = [
 demo = [
     "gradio>=5",
 ]
+notebooks = [
+    "facial-expression-analysis[train]",
+    "jupyterlab>=4",
+    "matplotlib>=3.8",
+]
 
 [project.scripts]
 fea = "facial_expression_analysis.cli:app"

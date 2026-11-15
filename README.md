@@ -48,6 +48,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e .           # core: images, webcam, Python API
 pip install -e ".[demo]"   # + Gradio web demo
 pip install -e ".[train]"  # + training and evaluation (scikit-learn, pandas)
+pip install -e ".[notebooks]"  # + JupyterLab and matplotlib for the walkthrough
 ```
 
 | Install | Gives you |
@@ -55,6 +56,7 @@ pip install -e ".[train]"  # + training and evaluation (scikit-learn, pandas)
 | `pip install -e .` | `fea predict`, `fea webcam`, the Python API (numpy, OpenCV, dlib) |
 | `[demo]` | the Gradio web demo |
 | `[train]` | `fea train`, `fea evaluate`, `fea train-frontalization`, the experiments |
+| `[notebooks]` | the walkthrough notebook |
 
 ## Use it
 
@@ -162,6 +164,23 @@ uv run fea benchmark examples/happy.jpg          # per-stage latency
 
 Every number in this README can be reproduced with the scripts in
 [`experiments/`](experiments/README.md).
+
+### 6. Walkthrough notebook
+
+[`notebooks/walkthrough.ipynb`](notebooks/walkthrough.ipynb) goes through the method end to end
+with the package's functions, in about 2 minutes:
+- the MorphSet labels;
+- the pipeline on one face;
+- training PLS(31) with a person-wise split;
+- why splitting by subject id leaks identity;
+- the facial movements the model responds to;
+- prediction on a photo.
+
+The outputs are saved in the notebook, so GitHub shows them.
+
+```bash
+uv run --extra notebooks jupyter lab notebooks/walkthrough.ipynb
+```
 
 ---
 
@@ -370,8 +389,8 @@ its nearest basis face doubles as a **reliability signal**: above the validation
 percentile (26.3), the landmarks have probably fitted badly. The demos show this for either
 model.
 
-**Interpretability.** Because the model is linear in distances, its gradient with respect to
-the landmarks gives the facial movement that raises each output (`experiments/11`):
+**Interpretability.** Regressing the frontalized landmarks on each prediction across all
+faces gives the facial movement that accompanies a higher output (`experiments/11`):
 
 - **Arousal** is 83% mouth: opening and stretching.
 - **Valence** is the lip corners and the brows.
@@ -506,6 +525,7 @@ facial-expression-analysis/
 │                         interpretability (interpret)
 ├── app/                  Gradio web demo (app.py layout, core.py engine, render.py SVG/HTML)
 ├── scripts/              web_demo.sh, demo.sh, deploy_space.sh (Hugging Face), readme_figures.py
+├── notebooks/            walkthrough.ipynb: the method end to end
 ├── experiments/          13 reproducible analyses behind every claim (see its README)
 ├── tests/                unit, regression and equivalence tests against the 2021 outputs
 ├── examples/             sample photos (used by the demos and tests)
