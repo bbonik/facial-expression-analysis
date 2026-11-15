@@ -93,8 +93,10 @@
   and per model, with a countdown and checks for non-neutral faces and poor fits (see the
   model card). The optional **Zero at my neutral** mode maps a calibrated face's own neutral
   to exactly (0, 0, 0), at a measured accuracy cost. Models now store `neutral_mean`.
-- Web demo layout is fixed: two independent columns (camera and settings | AV plane and
-  estimates); status appears only as tags, so no panel appears, disappears or moves.
+- Web demo layout is fixed: two equal columns (camera and settings | AV plane and estimates)
+  that end on the same line; settings in four group boxes (model, landmarks, smoothing,
+  calibration); Quit in the top-right corner; status appears only as tags, so no panel
+  appears, disappears or moves.
 - **Gradio web demo** (`app/`). It has live webcam and photo tabs, a custom SVG circumplex
   with the 24 emotion words and a trail, metric cards, a landmark-fit reliability badge and
   a live model switch. `scripts/deploy_space.sh` deploys it as a self-contained Hugging Face
@@ -106,7 +108,8 @@
   via `BoxRegressor`, a linear model trained on LFW to reproduce dlib's detector box
   (IoU 0.87; landmarks match detector-based fits within the detector's own noise floor). Fits
   use a robust mode (`DlibLandmarkDetector.fit(..., robust=True)`): linear contrast gain for
-  dim faces, slight blur, average of five shifted boxes, and a spread score that detects
+  dim faces, a blur that adapts to the measured noise (none in good light, so wide-open
+  mouths are still reached), average of five shifted boxes, and a spread score that detects
   tracking loss. Low-contrast frames are stretched linearly before detection. Simulated
   night-time webcam video: A/V jitter 0.236 → 0.113, landmark error 2.8% → 1.6%, frames
   without a face 10% → 6%; also about 2x faster.

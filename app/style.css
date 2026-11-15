@@ -263,3 +263,39 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
 .fea-col > *, .fea-plane { flex: 0 0 auto !important; }
 .fea-cam { height: 420px !important; max-height: 420px !important; }
 .fea-settings-block > div:not(.block) { border: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+
+
+/* ------------------------------------------------------------------ live layout v3 */
+/* Quit sits in the page's top-right corner */
+.fea-topbar { position: absolute !important; top: 14px; right: 20px; z-index: 50; width: auto !important; min-width: 0 !important; flex-grow: 0 !important; }
+.fea-topbar .fea-quit, .fea-topbar button { width: auto !important; min-width: 0 !important; padding: 4px 14px !important; }
+/* the two columns end at the same line: the last panel of each column fills */
+.fea-grid-row { align-items: stretch !important; }
+.fea-col-left > .fea-settings { flex: 1 1 auto !important; }
+.fea-col-right > .block:last-child { flex: 1 1 auto !important; display: flex !important; flex-direction: column; }
+.fea-col-right > .block:last-child > .html-container,
+.fea-col-right > .block:last-child .prose { flex: 1 1 auto; display: flex; flex-direction: column; height: 100%; }
+.fea-col-right .fea-est { flex: 1 1 auto; height: auto !important; min-height: 318px; }
+.fea-cam { height: 500px !important; max-height: 500px !important; }
+/* settings: four group boxes, 2 x 2 */
+.fea-settings { gap: 12px !important; padding: 0 !important; background: transparent !important; border: none !important; }
+.fea-settings-row { flex: 1 1 auto !important; gap: 12px !important; align-items: stretch !important; flex-wrap: wrap; }
+.fea-settings-row > .fea-group { flex: 1 1 240px !important; min-width: 220px !important; }
+.fea-settings-row > .fea-group {
+  background: var(--fea-card) !important; border: 1px solid var(--fea-border) !important;
+  border-radius: 16px !important; padding: 14px 16px !important;
+}
+/* Gradio repeats the class on an inner div: that one, and the form inside, stay plain */
+.fea-group .fea-group { background: transparent !important; border: none !important; padding: 0 !important; border-radius: 0 !important; }
+.fea-group .styler { background: transparent !important; gap: 10px !important; }
+.fea-group .form { background: transparent !important; border: none !important; gap: 6px !important; }
+.fea-group .block { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+.fea-group-head .fea-section-title { padding: 0 !important; }
+.fea-group-hint { font-size: 12.5px; color: var(--fea-muted); line-height: 1.4; margin-top: 2px; }
+.fea-radio-stack .wrap { flex-direction: column !important; align-items: stretch !important; gap: 6px !important; }
+.fea-radio-stack label { width: 100%; }
+.fea-group .fea-calib-row { gap: 8px !important; flex-wrap: nowrap; }
+.fea-group .fea-slider { padding: 0 6px !important; }
+.fea-group .fea-calib-row > * { flex: 1 1 0 !important; min-width: 0 !important; }
+.fea-group .fea-calib-row > .fea-calibrate { flex-grow: 1.6 !important; }
+.fea-group .fea-calib-row button { min-width: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

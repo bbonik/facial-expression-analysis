@@ -22,6 +22,15 @@ TARGET_FACE_CONTRAST = 43.7
 # Detection images whose 1st-99th percentile grey-level range is narrower than this are
 # stretched linearly to 0..255 before running the HOG detector.
 MIN_DETECTION_RANGE = 150.0
+# Adaptive Gaussian blur before a robust fit, against sensor noise. Its sigma is
+# (box width / BLUR_DIVISOR) x a ramp from 0 at NOISE_NO_BLUR to 1 at NOISE_FULL_BLUR, where
+# noise is the face region's noise std in grey levels (after the contrast gain). A fixed blur
+# makes the fitter under-reach wide-open mouths in good light; noise levels measured on
+# simulated video: well lit < 5 (sharp photos 2-5), dim ~7, night with auto-gain ~15.
+BLUR_DIVISOR = 110.0
+NOISE_NO_BLUR = 5.0
+NOISE_FULL_BLUR = 15.0
+_LAPLACIAN_NOISE_KERNEL = np.array([[1, -2, 1], [-2, 4, -2], [1, -2, 1]], dtype=np.float32)
 # Relative box offsets (dx, dy as a fraction of the box width) of the averaged fits.
 _FIT_OFFSETS = ((0.0, 0.0), (0.04, 0.0), (-0.04, 0.0), (0.0, 0.04), (0.0, -0.04))
 
@@ -38,6 +47,8 @@ class LandmarkFit:
 
     landmarks: NDArray[np.float64]
     spread: float
+    noise: float = 0.0
+    """Estimated noise std of the face region in grey levels (robust fits only)."""
 
 
 def _box_array(box: BoxLike) -> NDArray[np.float64]:
@@ -147,7 +158,9 @@ class DlibLandmarkDetector:
         * a linear contrast gain (never a reduction) brings the face box to the contrast
           of a well-lit face, because dlib's fitter compares raw pixel differences with
           fixed thresholds and loses accuracy on dim, flat faces;
-        * a slight Gaussian blur (sigma = box width / 110 px) suppresses sensor noise;
+        * an adaptive Gaussian blur suppresses sensor noise: none on a clean face (a blur
+          would stop the fit from reaching wide-open mouths), up to sigma = box width /
+          110 px when the face region is very noisy;
         * the fit is repeated from five slightly shifted boxes and averaged, which halves
           frame-to-frame jitter; their disagreement is returned as ``spread``.
         """
@@ -166,12 +179,17 @@ class DlibLandmarkDetector:
             return LandmarkFit(self._fit_once(gray, b), 1.0)
         crop: NDArray[np.float32] = gray[y0:y1, x0:x1].astype(np.float32)
         inner = gray[int(max(b[1], 0)) : int(max(b[3], 1)), int(max(b[0], 0)) : int(max(b[2], 1))]
+        gain = 1.0
         if inner.size:
             std = float(inner.std())
             if std < TARGET_FACE_CONTRAST:
                 gain = TARGET_FACE_CONTRAST / max(std, 1.0)
                 crop = ((crop - float(inner.mean())) * gain + 128.0).astype(np.float32)
-        crop = np.asarray(cv2.GaussianBlur(crop, (0, 0), w / 110.0), dtype=np.float32)
+        noise = estimate_noise(inner.astype(np.float32)) * gain if inner.size else 0.0
+        ramp = (noise - NOISE_NO_BLUR) / (NOISE_FULL_BLUR - NOISE_NO_BLUR)
+        sigma = w / BLUR_DIVISOR * float(np.clip(ramp, 0.0, 1.0))
+        if sigma > 0.05:
+            crop = np.asarray(cv2.GaussianBlur(crop, (0, 0), sigma), dtype=np.float32)
         img = np.ascontiguousarray(np.clip(np.round(crop), 0, 255).astype(np.uint8))
 
         offset = np.array([x0, y0, x0, y0], dtype=np.float64)
@@ -182,7 +200,17 @@ class DlibLandmarkDetector:
         mean = fits.mean(axis=0)
         io = float(np.linalg.norm(mean[36] - mean[45]))
         spread = float(np.sqrt(((fits - mean) ** 2).sum(-1).mean(0)).mean() / max(io, 1e-6))
-        return LandmarkFit(mean + offset[:2], spread)
+        return LandmarkFit(mean + offset[:2], spread, noise)
+
+
+def estimate_noise(image: NDArray[np.float32]) -> float:
+    """Noise standard deviation of an image (Immerkaer, CVIU 1996): fast and edge-robust."""
+    import cv2
+
+    if min(image.shape[:2]) < 3:
+        return 0.0
+    response = cv2.filter2D(np.asarray(image, dtype=np.float32), -1, _LAPLACIAN_NOISE_KERNEL)
+    return float(np.sqrt(np.pi / 2) * np.abs(response[1:-1, 1:-1]).mean() / 6.0)
 
 
 def to_gray(image: NDArray[np.uint8]) -> NDArray[np.uint8]:

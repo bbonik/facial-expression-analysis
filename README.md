@@ -66,14 +66,16 @@ scripts/web_demo.sh --share    # also prints a temporary public link (e.g. to tr
 ```
 
 - **Live** tab: click *Click to Access Webcam*, then *Start analysis*. It shows up to four
-  faces, each with its own colour and trail on the arousal-valence plane. Settings:
-  - **Model** switches between PLS(31) and kernel ridge on the same input.
-  - **Temporal smoothing** trades calm against reaction speed.
-  - **Show landmarks** toggles the landmark overlay.
-  - **Landmark tracking** (on by default) keeps the landmarks steadier and helps in low light.
-  - **Calibrate neutral** removes your resting-face offset after a 3-second countdown. Keep a
-    relaxed face.
-  - **Zero at my neutral** makes your calibrated neutral read exactly (0, 0, 0).
+  faces, each with its own colour and trail on the arousal-valence plane. The settings are in
+  four boxes:
+  - **Model:** PLS(31) or kernel ridge, switchable on the same input.
+  - **Landmarks:** *Show landmarks* toggles the overlay; *Landmark tracking* (on by default)
+    keeps the landmarks steadier and helps in low light.
+  - **Temporal smoothing:** trades calm against reaction speed.
+  - **Calibration:** *Calibrate neutral* removes your resting-face offset after a 3-second
+    countdown (keep a relaxed face); *Reset* clears it; *Zero at my neutral* makes your
+    calibrated neutral read exactly (0, 0, 0).
+  - *Quit demo* (top-right corner) stops the local server.
 - **Photo** tab: upload a photo or pick an example. Every face is analysed, and each gets a
   landmark-fit reliability badge.
 - **How it works** tab: the method in brief.
@@ -266,7 +268,12 @@ smoothing, with no CLAHE or other local enhancement that would distort the face:
 
 - **Contrast gain:** if the face box is dimmer than a typical well-lit face (grey-level std
   < 43.7), it gets a linear contrast gain. Contrast is never reduced.
-- **Blur:** a slight Gaussian blur (σ = box width / 110 px) suppresses sensor noise.
+- **Adaptive blur:** the noise in the face region is measured on every frame (Immerkær's
+  estimator), and a Gaussian blur is applied only as far as needed. There is none below a noise
+  level of 5 grey levels, rising to σ = box width / 110 px at 15 (a dark room with camera
+  auto-gain). A fixed blur made the fit fall short of wide-open mouths (a scream's lip opening
+  was 3.9% of the eye distance short); adaptive blur removes that in good light and keeps the
+  full noise suppression in the dark.
 - **Averaging:** the fit is repeated from five boxes shifted by ±4% and averaged.
 - **Spread as a loss signal:** the disagreement between those five fits (*spread*) is below
   2% on faces and above 3% when the box no longer holds a face. Above 3% on two frames in a
@@ -283,11 +290,11 @@ model:
 | Condition | Pipeline | Landmark error | Landmark jitter | A/V jitter | Frames without a face |
 |---|---|---|---|---|---|
 | Clean | detector every frame (v1) | 1.58% | 1.44% | 0.171 | 0.1% |
-| Clean | **tracker** | **1.44%** | **0.73%** | **0.096** | **0.0%** |
+| Clean | **tracker** | **1.34%** | **0.76%** | **0.096** | **0.0%** |
 | Night, camera auto-gain | detector every frame | 2.84% | 2.92% | 0.236 | 10.2% |
-| Night, camera auto-gain | **tracker** | **1.58%** | **1.16%** | **0.113** | **5.6%** |
+| Night, camera auto-gain | **tracker** | **1.57%** | **1.16%** | **0.113** | **5.8%** |
 | Dark, no auto-gain | detector every frame | 9.86% | 4.48% | 0.168 | 50.1% |
-| Dark, no auto-gain | **tracker** | **1.66%** | **1.15%** | **0.113** | **5.3%** |
+| Dark, no auto-gain | **tracker** | **1.62%** | **1.18%** | **0.113** | **5.3%** |
 
 The tracker is also about twice as fast: 5.9 ms against 12.3 ms per 640 px frame. Single
 photos keep the plain fit, so their landmarks match the ones the models were trained on.

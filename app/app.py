@@ -274,21 +274,37 @@ FORCE_DARK = """
 
 
 # ----------------------------------------------------------------------------- layout
+CAM_HEIGHT = 500
+
+
+def _group_title(title: str, hint: str) -> None:
+    gr.HTML(
+        f'<div class="fea-section-title">{title}</div><div class="fea-group-hint">{hint}</div>',
+        elem_classes="fea-html-plain fea-group-head",
+    )
+
+
 def build() -> gr.Blocks:
     with gr.Blocks(title="Facial Expression Analysis", fill_width=True) as demo:
+        if ALLOW_QUIT:  # top-right corner of the page, away from the settings
+            with gr.Row(elem_classes="fea-topbar"):
+                quit_btn = gr.Button(
+                    "Quit demo", variant="stop", size="sm", elem_classes="fea-quit"
+                )
+            quit_btn.click(quit_app, None, None, queue=False).then(None, None, None, js=GOODBYE_JS)
         gr.HTML(HERO, elem_classes="fea-html-plain")
         with gr.Tabs():
             with gr.Tab("Live", id="live"):
                 state = gr.State(LiveState())
-                # Two columns that stack independently (no gaps):
-                #   camera + settings (40%)  |  AV plane + estimates (60%)
-                with gr.Row(equal_height=False, elem_classes="fea-grid-row"):
-                    with gr.Column(scale=2, min_width=300, elem_classes="fea-col"):
+                # Two equal columns whose bottoms line up:
+                #   camera + settings  |  AV plane + estimates
+                with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
+                    with gr.Column(scale=1, min_width=320, elem_classes="fea-col fea-col-left"):
                         with gr.Column(elem_classes="fea-stage"):
                             cam = gr.Image(
                                 sources=["webcam"], streaming=True, type="numpy",
                                 show_label=False, webcam_options=gr.WebcamOptions(mirror=True),
-                                elem_classes="fea-cam", height=420,
+                                elem_classes="fea-cam", height=CAM_HEIGHT,
                             )  # fmt: skip
                             # Drawn exactly over the raw preview, so the user sees one feed;
                             # the camera's own start/stop button stays on top (see style.css).
@@ -296,33 +312,45 @@ def build() -> gr.Blocks:
                                 show_label=False, interactive=False, buttons=[], format="jpeg",
                                 elem_classes="fea-overlay",
                             )  # fmt: skip
-                        with gr.Group(elem_classes="fea-settings-block"):
-                            gr.HTML(
-                                '<div class="fea-section-title">Settings</div>',
-                                elem_classes="fea-html-plain",
-                            )
-                            model = gr.Radio(
-                                list(MODELS), value=DEFAULT_MODEL, label="Model",
-                                info="Switch while smiling to compare the two models.",
-                            )  # fmt: skip
-                            smoothing = gr.Slider(
-                                0, 0.9, value=0.3, step=0.05, label="Temporal smoothing",
-                                info="Higher is calmer but slower to react.",
-                            )  # fmt: skip
-                            with gr.Row(elem_classes="fea-check-row"):
-                                show_lm = gr.Checkbox(True, label="Show landmarks")
-                                tracking = gr.Checkbox(True, label="Landmark tracking")
-                            with gr.Row(elem_classes="fea-calib-row"):
-                                calibrate_btn = gr.Button(
-                                    "Calibrate neutral", size="sm", elem_classes="fea-calibrate"
-                                )
-                                reset_btn = gr.Button("Reset", size="sm", elem_classes="fea-reset")
-                            zero = gr.Checkbox(
-                                False, label="Zero at my neutral",
-                                info="After calibrating, your neutral face reads exactly "
-                                "neutral and expressions are shown relative to it "
-                                "(slightly less accurate).",
-                            )  # fmt: skip
+                        # Settings: four group boxes in a 2 x 2 grid
+                        with gr.Column(elem_classes="fea-settings"):
+                            with gr.Row(equal_height=True, elem_classes="fea-settings-row"):
+                                with gr.Group(elem_classes="fea-group"):
+                                    _group_title("Model", "Switch while smiling to compare.")
+                                    model = gr.Radio(
+                                        list(MODELS), value=DEFAULT_MODEL, show_label=False,
+                                        elem_classes="fea-radio-stack",
+                                    )  # fmt: skip
+                                with gr.Group(elem_classes="fea-group"):
+                                    _group_title(
+                                        "Landmarks", "Tracking: steadier, better in low light."
+                                    )
+                                    show_lm = gr.Checkbox(True, label="Show landmarks")
+                                    tracking = gr.Checkbox(True, label="Landmark tracking")
+                            with gr.Row(equal_height=True, elem_classes="fea-settings-row"):
+                                with gr.Group(elem_classes="fea-group"):
+                                    _group_title(
+                                        "Temporal smoothing",
+                                        "Higher is calmer but slower to react.",
+                                    )
+                                    smoothing = gr.Slider(
+                                        0, 0.9, value=0.3, step=0.05, show_label=False,
+                                        elem_classes="fea-slider",
+                                    )  # fmt: skip
+                                with gr.Group(elem_classes="fea-group"):
+                                    _group_title(
+                                        "Calibration",
+                                        "Removes your resting-face offset. Zeroing is less accurate.",
+                                    )
+                                    with gr.Row(elem_classes="fea-calib-row"):
+                                        calibrate_btn = gr.Button(
+                                            "Calibrate neutral", size="sm",
+                                            elem_classes="fea-calibrate",
+                                        )  # fmt: skip
+                                        reset_btn = gr.Button(
+                                            "Reset", size="sm", elem_classes="fea-reset"
+                                        )
+                                    zero = gr.Checkbox(False, label="Zero at my neutral")
                         # Clicks reach the stream as counters, so a click can never be
                         # overwritten by a frame that is still being processed.
                         calibrate_clicks = gr.Number(0, visible=False)
@@ -333,15 +361,7 @@ def build() -> gr.Blocks:
                         reset_btn.click(
                             lambda n: (n or 0) + 1, reset_clicks, reset_clicks, queue=False
                         )
-                        if ALLOW_QUIT:
-                            quit_btn = gr.Button(
-                                "Quit demo", variant="stop", size="sm",
-                                elem_classes="fea-quit",
-                            )  # fmt: skip
-                            quit_btn.click(quit_app, None, None, queue=False).then(
-                                None, None, None, js=GOODBYE_JS
-                            )
-                    with gr.Column(scale=3, min_width=380, elem_classes="fea-col"):
+                    with gr.Column(scale=1, min_width=320, elem_classes="fea-col fea-col-right"):
                         with gr.Column(elem_classes="fea-plane"):
                             live_circ = gr.HTML(
                                 _wrap_svg(circumplex_svg(size=640)),

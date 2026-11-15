@@ -131,3 +131,15 @@ def test_tracker_follows_a_moving_face_and_drops_it_when_it_leaves(frame) -> Non
     tracker.reset()
     assert tracker.frame == 0
     assert tracker.tracks == []
+
+
+def test_noise_estimate_tracks_added_noise() -> None:
+    from facial_expression_analysis.landmarks.dlib_detector import estimate_noise
+
+    rng = np.random.default_rng(0)
+    yy, xx = np.mgrid[0:120, 0:120]
+    smooth = (128 + 60 * np.sin(xx / 15.0) * np.cos(yy / 20.0)).astype(np.float32)
+    assert estimate_noise(smooth) < 1.0
+    for sigma in (5.0, 15.0):
+        noisy = smooth + rng.normal(0, sigma, smooth.shape).astype(np.float32)
+        assert abs(estimate_noise(noisy) - sigma) < 0.15 * sigma

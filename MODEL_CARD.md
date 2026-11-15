@@ -145,8 +145,8 @@ amplifies jitter by 1.2–1.4× and barely moves neutral.
   arousal shift drops from 0.54 to about 0.1), but accuracy still drops away from frontal.
 - **Low light.** dlib's landmark fitter compares raw pixel differences with fixed thresholds,
   so dim, low-contrast or noisy faces fit badly (3x the landmark error in a simulated dim
-  scene). The video tracker compensates with a linear contrast gain, slight blur and fit
-  averaging (`experiments/13_tracking.py`); single photos are fitted without it, to match the
+  scene). The video tracker compensates with a linear contrast gain, a noise-adaptive blur and
+  fit averaging (`experiments/13_tracking.py`); single photos are fitted without it, to match the
   training landmarks.
 - **Landmark quality bounds everything.** Errors on real photos come more often from poor dlib
   fits than from the regressor, for example a wide-open mouth or hands on the face.
