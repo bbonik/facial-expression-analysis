@@ -24,3 +24,11 @@ coverage.xml
 data/
 models/
 outputs/
+
+# LaTeX build files
+paper/latex/*.aux
+paper/latex/*.bbl
+paper/latex/*.blg
+paper/latex/*.log
+paper/latex/*.out
+paper/latex/main.pdf

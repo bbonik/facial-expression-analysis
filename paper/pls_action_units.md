@@ -6,6 +6,9 @@
 10 minutes on a laptop CPU), using the data and code of this repository. Raw outputs:
 `outputs/14_*.csv` and `outputs/14_log.txt`.
 
+**PDF:** [pls_action_units.pdf](pls_action_units.pdf), built from the LaTeX source in
+[`latex/`](latex/) (`pdflatex main && bibtex main && pdflatex main && pdflatex main`).
+
 ---
 
 ## Abstract

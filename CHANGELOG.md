@@ -8,6 +8,7 @@
   and 30 reliable dimensions above it; the first ~20 PLS components correspond to action units;
   at webcam noise levels the accuracy-optimal model has about 30 components, which explains why
   PLS(31) behaves best live. Figures in a ggplot-like style.
+  LaTeX version in `paper/latex/` with a compiled `paper/pls_action_units.pdf`.
 - `training.action_units`: geometric templates of 16 FACS action units on the 68-point face.
 
 ## [2.0.0] - 2026-11-15

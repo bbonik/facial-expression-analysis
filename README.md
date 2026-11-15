@@ -474,7 +474,8 @@ the behavioural tests are now part of model selection.
 ![Synthetic smile trajectories](docs/figures/behavioural_smile.png)
 
 **Why?** The working paper [*Why a low-dimensional linear model wins in real
-time*](paper/pls_action_units.md) investigates this (`experiments/14`).
+time*](paper/pls_action_units.md) ([PDF](paper/pls_action_units.pdf)) investigates this
+(`experiments/14`).
 - **Measured landmark noise.** Mirrored copies of each MorphSet image act as independent
   re-detections. Their difference is pure detector noise: about 1 px, concentrated in a few
   whole-shape directions.
