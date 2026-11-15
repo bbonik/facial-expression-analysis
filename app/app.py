@@ -34,9 +34,6 @@ from render import (
     draw_countdown,
     draw_overlay,
     estimates_card,
-    faces_grid,
-    fit_badge,
-    metrics_card,
 )
 
 REPO = "https://github.com/bbonik/facial-expression-analysis"
@@ -136,9 +133,20 @@ def live_step(
     return overlay, _wrap_svg(circumplex_svg(points, trails, size=640)), card, state
 
 
+PHOTO_MAX_FACES = 6
+PHOTO_EMPTY = {"empty_title": "No photo yet", "empty_hint": "Upload a photo or pick an example."}
+
+
+def photo_card(faces, model, footer=""):
+    rows = [(f.point, f.distance, []) for f in faces]
+    return estimates_card(
+        rows, model_name=model, p50=ENGINE.p50, p99=ENGINE.p99, footer=footer, **PHOTO_EMPTY
+    )
+
+
 def analyze_photo(image, model, show_landmarks):
     if image is None:
-        return None, _wrap_svg(circumplex_svg()), faces_grid([])
+        return None, _wrap_svg(circumplex_svg(size=640)), photo_card([], model)
     image = np.ascontiguousarray(image[..., :3], dtype=np.uint8)
     faces = ENGINE.analyze(image, model, photo=True)
     overlay = draw_overlay(
@@ -148,12 +156,15 @@ def analyze_photo(image, model, show_landmarks):
         [f.point for f in faces],
         show_landmarks=show_landmarks,
     )
-    rows = [(f.point, fit_badge(*ENGINE.fit(f.distance))) for f in faces]
-    if len(faces) == 1:  # a single face gets the full card
-        f = faces[0]
-        card = metrics_card(f.point, model_name=model, fit=ENGINE.fit(f.distance))
-        return overlay, _wrap_svg(circumplex_svg([f.point])), card
-    return overlay, _wrap_svg(circumplex_svg([f.point for f in faces])), faces_grid(rows)
+    shown = faces[:PHOTO_MAX_FACES]
+    if not faces:
+        footer = "No face found. Try a larger, frontal, well-lit face."
+    elif len(faces) > len(shown):
+        footer = f"{len(shown)} of {len(faces)} faces listed"
+    else:
+        footer = f"{len(faces)} face{'s' if len(faces) > 1 else ''}"
+    card = photo_card(shown, model, footer)
+    return overlay, _wrap_svg(circumplex_svg([f.point for f in faces], size=640)), card
 
 
 # ----------------------------------------------------------------------------- content
@@ -392,29 +403,51 @@ def build() -> gr.Blocks:
                 )
 
             with gr.Tab("Photo", id="photo"):
-                with gr.Row(equal_height=False):
-                    with gr.Column(scale=5, min_width=320):
-                        photo = gr.Image(
-                            sources=["upload", "clipboard", "webcam"], type="numpy",
-                            label="Photo",
-                        )  # fmt: skip
-                        photo_model = gr.Radio(list(MODELS), value=DEFAULT_MODEL, label="Model")
-                        photo_lm = gr.Checkbox(True, label="Show landmarks")
-                        if EXAMPLES is not None:
-                            gr.Examples(
-                                examples=sorted(
-                                    str(p) for p in EXAMPLES.iterdir()
-                                    if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
-                                ),
-                                inputs=photo, label="Examples",
+                # Same structure as the live tab: image + settings | AV plane + estimates
+                with gr.Row(equal_height=True, elem_classes="fea-grid-row"):
+                    with gr.Column(scale=1, min_width=320, elem_classes="fea-col fea-col-left"):
+                        with gr.Column(elem_classes="fea-photo-stage"):
+                            photo = gr.Image(
+                                sources=["upload"], type="numpy", buttons=[],
+                                show_label=False, elem_classes="fea-photo-in", height=CAM_HEIGHT,
                             )  # fmt: skip
-                    with gr.Column(scale=5, min_width=320):
-                        photo_out = gr.Image(label="Analysis", interactive=False)
-                    with gr.Column(scale=4, min_width=300):
-                        photo_circ = gr.HTML(
-                            _wrap_svg(circumplex_svg()), elem_classes="fea-html-plain"
+                            # the analysed photo is drawn exactly over the uploaded one
+                            photo_out = gr.Image(
+                                show_label=False, interactive=False, buttons=["download"],
+                                elem_classes="fea-photo-out",
+                            )  # fmt: skip
+                        with gr.Column(elem_classes="fea-settings"):
+                            with gr.Row(equal_height=True, elem_classes="fea-settings-row"):
+                                with gr.Group(elem_classes="fea-group"):
+                                    _group_title("Model", "Compare both on the same photo.")
+                                    photo_model = gr.Radio(
+                                        list(MODELS), value=DEFAULT_MODEL, show_label=False,
+                                        elem_classes="fea-radio-stack",
+                                    )  # fmt: skip
+                                with gr.Group(elem_classes="fea-group"):
+                                    _group_title("Landmarks", "dlib, 68 points per face.")
+                                    photo_lm = gr.Checkbox(True, label="Show landmarks")
+                            if EXAMPLES is not None:
+                                with (
+                                    gr.Row(elem_classes="fea-settings-row"),
+                                    gr.Group(elem_classes="fea-group fea-examples"),
+                                ):
+                                    _group_title("Examples", "Click one to analyse it.")
+                                    gr.Examples(
+                                        examples=sorted(
+                                            str(p) for p in EXAMPLES.iterdir()
+                                            if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+                                        ),
+                                        inputs=photo, label=None, examples_per_page=12,
+                                    )  # fmt: skip
+                    with gr.Column(scale=1, min_width=320, elem_classes="fea-col fea-col-right"):
+                        with gr.Column(elem_classes="fea-plane"):
+                            photo_circ = gr.HTML(
+                                _wrap_svg(circumplex_svg(size=640)), elem_classes="fea-html-plain"
+                            )
+                        photo_faces = gr.HTML(
+                            photo_card([], DEFAULT_MODEL), elem_classes="fea-html-plain"
                         )
-                        photo_faces = gr.HTML(faces_grid([]), elem_classes="fea-html-plain")
                 for trigger in (photo.change, photo_model.change, photo_lm.change):
                     trigger(
                         analyze_photo,

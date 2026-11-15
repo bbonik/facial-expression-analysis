@@ -299,3 +299,28 @@ button[role="tab"][aria-selected="true"] { color: var(--fea-accent) !important; 
 .fea-group .fea-calib-row > * { flex: 1 1 0 !important; min-width: 0 !important; }
 .fea-group .fea-calib-row > .fea-calibrate { flex-grow: 1.6 !important; }
 .fea-group .fea-calib-row button { min-width: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ------------------------------------------------------------------ photo tab */
+.fea-photo-stage { position: relative; gap: 0 !important; }
+.fea-photo-in { height: 500px !important; max-height: 500px !important; border-radius: 16px !important; overflow: hidden; }
+.fea-photo-in img, .fea-photo-out img { object-fit: contain !important; }
+.fea-photo-out {
+  position: absolute !important; inset: 0; margin: 0 !important; padding: 0 !important;
+  border-radius: 16px !important; overflow: hidden; z-index: 5; background: var(--fea-card) !important;
+  border: 1px solid var(--fea-border) !important;
+}
+.fea-photo-out .image-container, .fea-photo-out .image-container > button,
+.fea-photo-out .image-frame { width: 100% !important; height: 100% !important; max-height: none !important; padding: 0 !important; }
+.fea-photo-out img { width: 100% !important; height: 100% !important; }
+.fea-photo-out > .wrap { display: none !important; }
+/* before an analysis exists, the upload box shows through */
+.fea-photo-out:not(:has(img)) { visibility: hidden; }
+/* the upload box's own clear / source buttons stay usable above the analysis */
+.fea-photo-in .icon-button-wrapper, .fea-photo-in .source-selection { position: relative; z-index: 10 !important; }
+.fea-examples .gallery { gap: 8px !important; }
+.fea-examples .gallery-item, .fea-examples button.gallery-item { border-radius: 10px !important; overflow: hidden; }
+.fea-examples .label { display: none !important; }
+.fea-examples .gallery { padding: 0 !important; }
+/* upload box: its clear button top-right, the download of the analysis just left of it */
+.fea-photo-in .icon-button-wrapper { position: absolute !important; top: 8px !important; right: 8px !important; left: auto !important; z-index: 12 !important; }
+.fea-photo-out .icon-button-wrapper { position: absolute !important; top: 8px !important; right: 48px !important; left: auto !important; }

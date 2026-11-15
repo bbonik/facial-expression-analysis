@@ -19,9 +19,7 @@ from render import (
     Point,
     circumplex_svg,
     draw_overlay,
-    faces_grid,
     fit_badge,
-    metrics_card,
     valence_hex,
 )
 
@@ -52,19 +50,24 @@ def test_valence_colours() -> None:
 
 
 def test_cards() -> None:
-    card = metrics_card(Point(0.1, -0.5, 0.51, "Moderately sad"), model_name="PLS(31)",
-                        fit=(30.0, 16.0, 26.0))  # fmt: skip
+    from render import estimates_card
+
+    card = estimates_card([(Point(0.1, -0.5, 0.51, "Moderately sad"), 30.0, [])],
+                          model_name="PLS(31)", p50=16.0, p99=26.0)  # fmt: skip
     assert "Moderately sad" in card
     assert "fea-badge-warn" in card
     assert "+0.51" not in card
     assert "0.51" in card
-    assert "fea-empty" in metrics_card(None, model_name="x")
     assert "fea-badge-ok" in fit_badge(10.0, 16.0, 26.0)
     assert fit_badge(None, 16.0, 26.0) == ""
-    grid = faces_grid([(Point(0.2, 0.7, 0.73, "Very happy", "1"), ""),
-                       (Point(0.5, -0.4, 0.64, "Very annoyed", "2"), "")])  # fmt: skip
-    assert grid.count('class="fea-face"') == 2
-    assert "Upload a photo" in faces_grid([])
+    grid = estimates_card([(Point(0.2, 0.7, 0.73, "Very happy", "1"), 10.0, []),
+                           (Point(0.5, -0.4, 0.64, "Very annoyed", "2"), 10.0, [])],
+                          model_name="x", p99=26.0)  # fmt: skip
+    assert grid.count('class="fea-mini"') == 2
+    empty = estimates_card([], model_name="x", empty_title="No photo yet",
+                           empty_hint="Upload a photo or pick an example.")  # fmt: skip
+    assert "No photo yet" in empty
+    assert "Upload a photo" in empty
 
 
 def test_overlay_keeps_shape(landmarks: np.ndarray) -> None:

@@ -220,14 +220,6 @@ def _bar(name: str, value: float, bipolar: bool, color: str) -> str:
     )
 
 
-def status_banner(text: str, kind: str = "info") -> str:
-    """Calibration progress / result shown above the estimates."""
-    return f'<div class="fea-status fea-status-{kind}">{html.escape(text)}</div>'
-
-
-CALIBRATED_CHIP = '<span class="fea-chip">calibrated</span>'
-
-
 def fit_badge(distance: float | None, p50: float | None, p99: float | None) -> str:
     if distance is None or p99 is None:
         return ""
@@ -243,67 +235,6 @@ def fit_badge(distance: float | None, p50: float | None, p99: float | None) -> s
         f'<span class="fea-badge-sub">distance to training faces {distance:.1f} '
         f"({ref})</span></div>"
     )
-
-
-LIVE_HINT = ("No face detected yet", "Start the camera and face it in good, even light.")
-PHOTO_HINT = ("No face to show yet", "Upload a photo or pick one of the examples.")
-
-
-def empty_card(hint: tuple[str, str] = LIVE_HINT) -> str:
-    title, sub = (html.escape(t) for t in hint)
-    return (
-        '<div class="fea-card fea-empty"><div class="fea-empty-icon">◎</div>'
-        f'<div>{title}</div><div class="fea-muted">{sub}</div></div>'
-    )
-
-
-def metrics_card(
-    point: Point | None,
-    *,
-    model_name: str,
-    fit: tuple[float | None, float | None, float | None] = (None, None, None),
-    footer: str = "",
-    hint: tuple[str, str] = LIVE_HINT,
-    calibrated: bool = False,
-) -> str:
-    """Large label, A/V/I bars and the fit badge for the tracked face."""
-    if point is None:
-        return empty_card(hint)
-    color = valence_hex(point.valence)
-    bars = (
-        _bar("Arousal", point.arousal, True, color)
-        + _bar("Valence", point.valence, True, color)
-        + _bar("Intensity", point.intensity, False, color)
-    )
-    return (
-        '<div class="fea-card">'
-        f'<div class="fea-kicker">{html.escape(model_name)}'
-        + (" " + CALIBRATED_CHIP if calibrated else "")
-        + "</div>"
-        f'<div class="fea-label" style="color:{color}">{html.escape(point.label)}</div>'
-        f'<div class="fea-metrics">{bars}</div>'
-        f"{fit_badge(*fit)}"
-        + (f'<div class="fea-footer">{footer}</div>' if footer else "")
-        + "</div>"
-    )
-
-
-def faces_grid(rows: Sequence[tuple[Point, str]]) -> str:
-    """One compact card per face (photo mode); ``rows`` = (point, fit badge html)."""
-    if not rows:
-        return empty_card(PHOTO_HINT)
-    cards = []
-    for p, badge in rows:
-        color = valence_hex(p.valence)
-        cards.append(
-            '<div class="fea-face">'
-            f'<div class="fea-face-tag" style="background:{p.accent or color}">'
-            f"{html.escape(p.tag)}</div>"
-            f'<div class="fea-face-label" style="color:{color}">{html.escape(p.label)}</div>'
-            f'<div class="fea-face-nums">A {p.arousal:+.2f} · V {p.valence:+.2f} · '
-            f"I {p.intensity:.2f}</div>{badge}</div>"
-        )
-    return f'<div class="fea-faces">{"".join(cards)}</div>'
 
 
 # --------------------------------------------------------------------------- overlay
@@ -398,8 +329,10 @@ def estimates_card(
     p50: float | None = None,
     p99: float | None = None,
     footer: str = "",
+    empty_hint: str = "Start the camera and face it in good, even light.",
+    empty_title: str = "No face detected yet",
 ) -> str:
-    """Fixed-height estimates panel for the live tab: same box for 0, 1 or several faces.
+    """Fixed-height estimates panel (live and photo tabs): same box for 0, 1 or more faces.
 
     ``faces`` holds (smoothed point, fit distance, per-face chips). Status is shown only
     as chips in the header row, so nothing appears, disappears or moves.
@@ -414,8 +347,8 @@ def estimates_card(
     if not faces:
         body = (
             '<div class="fea-est-empty"><div class="fea-empty-icon">◎</div>'
-            "<div>No face detected yet</div>"
-            '<div class="fea-muted">Start the camera and face it in good, even light.</div></div>'
+            f"<div>{html.escape(empty_title)}</div>"
+            f'<div class="fea-muted">{html.escape(empty_hint)}</div></div>'
         )
     elif len(faces) == 1:
         p, dist, _ = faces[0]
