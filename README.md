@@ -12,9 +12,9 @@ with no GPU.
 
 ![Live web demo](docs/images/web_demo_live.jpg)
 
-> **v2** (this branch) is a full rewrite of the 2021 code, with bug fixes, a retrained and
-> evaluated model, landmark tracking for video and a web demo. The original code is tagged
-> [`v1.0.0`](../../tree/v1.0.0).
+> **v2.0** is a full rewrite of the 2021 code, with bug fixes, a retrained and evaluated model,
+> landmark tracking for video and a web demo (see the [changelog](CHANGELOG.md)). The original
+> code is tagged [`v1.0.0`](../../tree/v1.0.0).
 
 **Contents:** [Install](#install) · [Use it](#use-it) · [How it works (science)](#how-it-works)
 · [Results](#results) · [Repository layout](#repository-layout) · [Development](#development)
@@ -34,7 +34,6 @@ automatically.
 ```bash
 git clone https://github.com/bbonik/facial-expression-analysis.git
 cd facial-expression-analysis
-git checkout v2
 uv sync                    # creates .venv with the package and the dev tools
 uv run fea download        # optional: pre-fetch the dlib model
 ```
@@ -43,7 +42,7 @@ uv run fea download        # optional: pre-fetch the dlib model
 
 ```bash
 git clone https://github.com/bbonik/facial-expression-analysis.git
-cd facial-expression-analysis && git checkout v2
+cd facial-expression-analysis
 python -m venv .venv && source .venv/bin/activate
 pip install -e .           # core: images, webcam, Python API
 pip install -e ".[demo]"   # + Gradio web demo

@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] - v2.0.0
+## [2.0.0] - 2026-11-15
 
 ### Fixed
 - Arousal/valence were clipped per axis, so points could reach the corners of the square

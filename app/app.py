@@ -176,7 +176,7 @@ HERO = f"""
   interpretable linear model trained on 83k faces of 337 people.</p>
   <div class="fea-links">
     <a href="{REPO}" target="_blank">GitHub</a>
-    <a href="{REPO}/blob/v2/MODEL_CARD.md" target="_blank">Model card</a>
+    <a href="{REPO}/blob/main/MODEL_CARD.md" target="_blank">Model card</a>
     <a href="https://arxiv.org/abs/2103.02854" target="_blank">MorphSet · ICIP 2021</a>
     <a href="https://stefan.winkler.site/Publications/icip2020a.pdf" target="_blank">Frontalization · ICIP 2020</a>
   </div>

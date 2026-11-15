@@ -83,7 +83,7 @@ Estimate **arousal, valence and intensity** from 68 facial landmarks in real tim
 interpretable linear model (PLS, 31 components) trained on 83k faces of 337 people.
 
 - Code, experiments and evaluation: https://github.com/bbonik/facial-expression-analysis
-- Model card: https://github.com/bbonik/facial-expression-analysis/blob/v2/MODEL_CARD.md
+- Model card: https://github.com/bbonik/facial-expression-analysis/blob/main/MODEL_CARD.md
 - Papers: MorphSet (ICIP 2021), landmark frontalization (ICIP 2020)
 
 Built from commit `{ref}`.
